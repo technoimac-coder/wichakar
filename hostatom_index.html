@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ระบบผลการเรียน โรงเรียนมกุฎเมืองราชวิทยาลัย</title>
+    <link rel="icon" type="image/png" href="https://lh3.googleusercontent.com/d/12IL8pMebvGZCeRage4JHcw7woeS4DnXU">
+    
+    <!-- Open Graph / Meta Tags -->
+    <meta property="og:title" content="ระบบผลการเรียน โรงเรียนมกุฎเมืองราชวิทยาลัย">
+    <meta property="og:description" content="ระบบส่งสำเนาคะแนนและติดตามผลการเรียนติด ซ โรงเรียนมกุฎเมืองราชวิทยาลัย">
+    <meta property="og:image" content="https://lh3.googleusercontent.com/d/12IL8pMebvGZCeRage4JHcw7woeS4DnXU">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #1e3a8a;
+            font-family: "Sarabun", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        .loading-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #ffffff;
+            z-index: 10;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255, 255, 255, 0.2);
+            border-top-color: #ffffff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .logo {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            border: 2px solid rgba(255,255,255,0.8);
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- หน้าจอโหลดระหว่างรอเปิดระบบ -->
+    <div id="loading" class="loading-container">
+        <img src="https://lh3.googleusercontent.com/d/12IL8pMebvGZCeRage4JHcw7woeS4DnXU" alt="Logo โรงเรียนมกุฎเมืองราชวิทยาลัย" class="logo">
+        <div class="spinner"></div>
+        <h2 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 6px;">ระบบผลการเรียน</h2>
+        <p style="font-size: 0.875rem; opacity: 0.85;">โรงเรียนมกุฎเมืองราชวิทยาลัย</p>
+    </div>
+
+    <!-- ฝังหน้า Web App แบบเต็มจอ 100% -->
+    <iframe 
+        id="appFrame"
+        src="https://script.google.com/a/macros/mmv.ac.th/s/AKfycbzJgB45XgG6OWGVgOswK3v8aiYhM0_op1-kwIMb44EmFBxk1x4OOqln5UlZZDe_0BBkPg/exec"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        allowfullscreen>
+    </iframe>
+
+    <script>
+        const iframe = document.getElementById("appFrame");
+        const loading = document.getElementById("loading");
+
+        iframe.onload = function() {
+            setTimeout(() => {
+                loading.style.opacity = "0";
+                setTimeout(() => {
+                    loading.style.display = "none";
+                }, 500);
+            }, 300);
+        };
+    </script>
+</body>
+</html>
