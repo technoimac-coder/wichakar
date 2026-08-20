@@ -3070,8 +3070,8 @@ function printScoreCopy() {
                     <div><b>ชั้น/ห้อง:</b> ${subjData.subjectCode === 'CLUB' ? 'ทุกห้อง' : 'ม.' + clLevel + '/' + subjData.room}</div>
                     <div><b>ครูผู้สอน:</b> ${currentTeacherName}</div>
                     <div><b>จำนวนนักเรียน:</b> ${students.length} คน</div>
-                    \${currentLoadedSubmission && currentLoadedSubmission.submitted_at ? `<div><b>วันที่ส่งสำเนา:</b> \${currentLoadedSubmission.submitted_at}</div>` : ''}
-                    <div><b>สถานะสำเนา:</b> \${currentLoadedSubmission ? (currentLoadedSubmission.status === 'Approved' ? 'อนุมัติแล้ว' : currentLoadedSubmission.status === 'Submitted' ? 'ส่งแล้ว รออนุมัติ' : 'แบบร่าง') : 'แบบร่าง'}</div>
+                    ${currentLoadedSubmission && currentLoadedSubmission.submitted_at ? `<div><b>วันที่ส่งสำเนา:</b> ${currentLoadedSubmission.submitted_at}</div>` : ''}
+                    <div><b>สถานะสำเนา:</b> ${currentLoadedSubmission ? (currentLoadedSubmission.status === 'Approved' ? 'อนุมัติแล้ว' : currentLoadedSubmission.status === 'Submitted' ? 'ส่งแล้ว รออนุมัติ' : 'แบบร่าง') : 'แบบร่าง'}</div>
                 </div>
             </div>
 
@@ -3081,7 +3081,7 @@ function printScoreCopy() {
                         <th style="border: 1px solid #000; width: 45px; padding: 6px; font-weight: bold;">เลขที่</th>
                         <th style="border: 1px solid #000; width: 85px; padding: 6px; font-weight: bold;">เลขประจำตัว</th>
                         <th style="border: 1px solid #000; text-align: left; padding: 6px 10px; font-weight: bold;">ชื่อ - นามสกุล</th>
-                        \${activeCols.map(col => `<th style="border: 1px solid #000; padding: 6px; font-weight: bold; min-width: 50px;">\${col.name}</th>`).join('')}
+                        ${activeCols.map(col => `<th style="border: 1px solid #000; padding: 6px; font-weight: bold; min-width: 50px;">${col.name}</th>`).join('')}
                         <th style="border: 1px solid #000; width: 90px; padding: 6px; font-weight: bold;">ผลการประเมิน</th>
                     </tr>
                 </thead>
@@ -3091,14 +3091,14 @@ function printScoreCopy() {
     students.forEach(st => {
         html += `
             <tr style="border-bottom: 1px solid #000;">
-                <td style="border: 1px solid #000; padding: 5px;">\${st.no}</td>
-                <td style="border: 1px solid #000; padding: 5px; font-family: monospace;">\${st.id}</td>
-                <td style="border: 1px solid #000; padding: 5px 10px; text-align: left; white-space: nowrap;">\${st.name}</td>
-                \${activeCols.map(col => {
+                <td style="border: 1px solid #000; padding: 5px;">${st.no}</td>
+                <td style="border: 1px solid #000; padding: 5px; font-family: monospace;">${st.id}</td>
+                <td style="border: 1px solid #000; padding: 5px 10px; text-align: left; white-space: nowrap;">${st.name}</td>
+                ${activeCols.map(col => {
                     let val = st['s' + col.index];
-                    return `<td style="border: 1px solid #000; padding: 5px;">\${val !== undefined && val !== null ? val : ''}</td>`;
+                    return `<td style="border: 1px solid #000; padding: 5px;">${val !== undefined && val !== null ? val : ''}</td>`;
                 }).join('')}
-                <td style="border: 1px solid #000; padding: 5px; font-weight: bold; \${st.status !== 'ปกติ' && st.status ? 'color: red;' : ''}">\${st.status || 'ปกติ'}</td>
+                <td style="border: 1px solid #000; padding: 5px; font-weight: bold; ${st.status !== 'ปกติ' && st.status ? 'color: red;' : ''}">${st.status || 'ปกติ'}</td>
             </tr>
         `;
     });
@@ -3110,7 +3110,7 @@ function printScoreCopy() {
             <div style="margin-top: 35px; page-break-inside: avoid; display: grid; grid-template-columns: 1fr 1fr; gap: 30px; font-size: 13px; text-align: center;">
                 <div style="padding: 10px;">
                     ลงชื่อ.................................................................ครูผู้สอน<br>
-                    ( \${currentTeacherName} )<br>
+                    ( ${currentTeacherName} )<br>
                     ตำแหน่ง.................................................................<br>
                     ......./......./.......
                 </div>
@@ -3143,7 +3143,7 @@ function closePrintPreviewModal() {
 function triggerBrowserPrint() {
     const printArea = document.getElementById("printArea");
     const w = window.open();
-    w.document.write(\`
+    w.document.write(`
         <html>
             <head>
                 <title>พิมพ์สำเนาคะแนน</title>
@@ -3156,7 +3156,7 @@ function triggerBrowserPrint() {
                 </style>
             </head>
             <body>
-                \${printArea.innerHTML}
+                ${printArea.innerHTML}
                 <script>
                     window.onload = function() {
                         window.print();
@@ -3165,7 +3165,7 @@ function triggerBrowserPrint() {
                 <\/script>
             </body>
         </html>
-    \`);
+    `);
     w.document.close();
 }
 
@@ -3173,7 +3173,7 @@ function downloadScoreCopyPDF() {
     const element = document.getElementById('printArea');
     const select = document.getElementById("subjectSelect");
     const subjData = JSON.parse(select.value);
-    const filename = \`สำเนาคะแนน_\${subjData.subjectCode}_ห้อง_\${subjData.room}_เทอม_\${currentTerm}-\\${currentYear}.pdf\`;
+    const filename = `สำเนาคะแนน_${subjData.subjectCode}_ห้อง_${subjData.room}_เทอม_${currentTerm}-${currentYear}.pdf`;
     
     html2pdf().set({
         margin: [0.5, 0.5, 0.5, 0.5],
