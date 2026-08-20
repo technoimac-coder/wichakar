@@ -56,7 +56,10 @@ window.google = {
       uploadClubStudents: function(data, overwrite) { this._call("uploadClubStudents", { data: data, overwrite: overwrite }); },
       uploadStudents: function(data, overwrite) { this._call("uploadStudents", { data: data, overwrite: overwrite }); },
       getTeacherAccounts: function() { this._call("getTeacherAccounts"); },
-      resetTeacherPassword: function(username) { this._call("resetTeacherPassword", { username: username }); }
+      resetTeacherPassword: function(username) { this._call("resetTeacherPassword", { username: username }); },
+      submitScoreCopy: function(data) { this._call("submitScoreCopy", data); },
+      adminGetSubmissions: function(term, year, period) { this._call("adminGetSubmissions", { term: term, year: year, period: period }); },
+      adminUpdateSubmission: function(term, year, period, subjectCode, room, status, rejectReason) { this._call("adminUpdateSubmission", { term: term, year: year, period: period, subjectCode: subjectCode, room: room, status: status, rejectReason: rejectReason }); }
     }
   }
 };
@@ -81,6 +84,58 @@ body{font-family:'Sarabun',sans-serif;background-color:#f3f4f6;}
 .status-danger{color:#ef4444;font-weight:bold;}
 .status-warning{color:#f97316;font-weight:bold;}
 .input-cell{min-width:60px;}
+
+.sticky-col-1 {
+    position: sticky;
+    left: 0;
+    z-index: 10;
+}
+.sticky-col-2 {
+    position: sticky;
+    left: 48px;
+    z-index: 10;
+}
+.sticky-col-3 {
+    position: sticky;
+    left: 128px;
+    z-index: 10;
+    box-shadow: 2px 0 5px -2px rgba(0,0,0,0.15);
+}
+/* Default backgrounds for body cells */
+tbody td.sticky-col-1, tbody td.sticky-col-2, tbody td.sticky-col-3 {
+    background-color: #fff;
+}
+/* Hover backgrounds */
+tr:hover td.sticky-col-1, tr:hover td.sticky-col-2, tr:hover td.sticky-col-3 {
+    background-color: #f1f5f9 !important;
+}
+/* Header backgrounds */
+thead th.sticky-col-1, thead th.sticky-col-2, thead th.sticky-col-3 {
+    z-index: 30;
+    background-color: #f8fafc;
+}
+/* Specific color schemes for CLUB / ACT99 */
+.bg-green-50 th.sticky-col-1, .bg-green-50 th.sticky-col-2, .bg-green-50 th.sticky-col-3 {
+    background-color: #f0fdf4 !important;
+}
+.bg-blue-100\/50 th.sticky-col-1, .bg-blue-100\/50 th.sticky-col-2, .bg-blue-100\/50 th.sticky-col-3 {
+    background-color: #eff6ff !important;
+}
+/* Special row backgrounds like bg-red-50/30 */
+tr.bg-red-50\/30 td.sticky-col-1, tr.bg-red-50\/30 td.sticky-col-2, tr.bg-red-50\/30 td.sticky-col-3 {
+    background-color: #fef2f2 !important;
+}
+tr.bg-red-50\/30:hover td.sticky-col-1, tr.bg-red-50\/30:hover td.sticky-col-2, tr.bg-red-50\/30:hover td.sticky-col-3 {
+    background-color: #fee2e2 !important;
+}
+/* Special row backgrounds for CLUB green rows on hover */
+tr.hover\:bg-green-50\/50:hover td.sticky-col-1, tr.hover\:bg-green-50\/50:hover td.sticky-col-2, tr.hover\:bg-green-50\/50:hover td.sticky-col-3 {
+    background-color: #f0fdf4 !important;
+}
+/* Special row backgrounds for normal subject blue hover rows */
+tr.hover\:bg-blue-50\/50:hover td.sticky-col-1, tr.hover\:bg-blue-50\/50:hover td.sticky-col-2, tr.hover\:bg-blue-50\/50:hover td.sticky-col-3 {
+    background-color: #eff6ff !important;
+}
 </style>
 </head>
 <body class="text-gray-800 antialiased">
@@ -145,6 +200,44 @@ body{font-family:'Sarabun',sans-serif;background-color:#f3f4f6;}
                     ปิดหน้าต่าง
                 </button>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal พิมพ์สำเนาคะแนน -->
+<div id="printPreviewModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-[100] hidden flex items-center justify-center p-4 transition-opacity">
+    <div class="bg-white rounded-2xl w-full max-w-5xl max-h-[95vh] shadow-2xl flex flex-col fade-in overflow-hidden">
+        <div class="bg-gradient-to-r from-blue-700 to-indigo-800 text-white px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-xl">
+                    <i class="fa-solid fa-print"></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold">พิมพ์สำเนาคะแนนเก็บนักเรียน</h3>
+                    <p class="text-xs text-blue-100">ตัวอย่างเอกสารก่อนพิมพ์ (ปพ.5)</p>
+                </div>
+            </div>
+            <button onclick="closePrintPreviewModal()" class="text-white hover:bg-white/20 w-8 h-8 rounded-full flex items-center justify-center transition">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+        
+        <div class="p-6 overflow-y-auto flex-grow table-scrollbar bg-gray-100">
+            <div id="printArea" class="bg-white p-8 shadow-md mx-auto max-w-[210mm] min-h-[297mm] text-gray-800" style="font-family: 'Sarabun', sans-serif;">
+                <!-- รายละเอียดคะแนนสำหรับการพิมพ์จะแสดงตรงนี้ -->
+            </div>
+        </div>
+
+        <div class="p-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3">
+            <button onclick="downloadScoreCopyPDF()" class="px-5 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-bold transition text-sm flex items-center gap-2 shadow-sm">
+                <i class="fa-solid fa-file-pdf"></i> ดาวน์โหลด PDF
+            </button>
+            <button onclick="triggerBrowserPrint()" class="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold transition text-sm flex items-center gap-2 shadow-sm">
+                <i class="fa-solid fa-print"></i> พิมพ์เอกสาร (Print)
+            </button>
+            <button onclick="closePrintPreviewModal()" class="px-5 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium transition text-sm">
+                ปิดหน้าต่าง
+            </button>
         </div>
     </div>
 </div>
@@ -315,8 +408,11 @@ body{font-family:'Sarabun',sans-serif;background-color:#f3f4f6;}
 <h3 id="tableTitle" class="text-lg font-bold text-blue-800">รายชื่อนักเรียน</h3>
 <p id="tableSubtitle" class="text-xs text-blue-600 mt-1">สามารถเลือกกรอกเฉพาะช่องที่ต้องการได้ หรือพิมพ์ชื่อหัวคอลัมน์ได้เอง</p>
 </div>
+<div class="flex items-center gap-3">
+<span id="submissionBadge" class="hidden text-xs px-3 py-1.5 rounded-full font-bold border"></span>
 <div class="text-sm bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-medium whitespace-nowrap">
 <i class="fa-solid fa-users mr-1"></i> <span id="studentCount">0</span> คน
+</div>
 </div>
 </div>
 <div class="overflow-x-auto table-scrollbar" style="max-height: 60vh;">
@@ -325,10 +421,17 @@ body{font-family:'Sarabun',sans-serif;background-color:#f3f4f6;}
 <tbody id="studentTableBody" class="text-sm"></tbody>
 </table>
 </div>
-<div class="p-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3">
+<div class="p-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3 items-center">
+<span id="rejectReasonText" class="hidden text-xs text-red-600 font-bold mr-auto"></span>
 <span id="saveStatus" class="text-gray-500 text-sm hidden flex items-center"><div class="loader mr-2"></div> กำลังบันทึก...</span>
+<button id="printBtn" onclick="printScoreCopy()" class="hidden bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-lg transition flex items-center gap-2 shadow-md">
+<i class="fa-solid fa-print"></i> พิมพ์สำเนาคะแนน
+</button>
 <button id="saveBtn" onclick="saveData()" class="bg-green-600 text-white font-bold py-2.5 px-8 rounded-lg hover:bg-green-700 transition flex items-center gap-2 shadow-md">
 <i class="fa-solid fa-cloud-arrow-up"></i> บันทึกคะแนน
+</button>
+<button id="submitCopyBtn" onclick="openSubmitCopyModal()" class="bg-indigo-600 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-indigo-700 transition flex items-center gap-2 shadow-md">
+<i class="fa-solid fa-paper-plane"></i> ส่งสำเนาคะแนน
 </button>
 </div>
 </div>
@@ -490,6 +593,62 @@ body{font-family:'Sarabun',sans-serif;background-color:#f3f4f6;}
 <div id="reportErrorMsg" class="hidden bg-red-50 text-red-600 p-4 rounded-lg text-center font-medium mb-4"></div>
 <div id="reportContainer" class="overflow-x-auto bg-white hidden p-0 flex justify-center"></div>
 </div>
+
+    <!-- การ์ดตรวจรับและอนุมัติสำเนาคะแนน (ฝ่ายวิชาการ/Admin) -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6 border-l-4 border-l-indigo-600">
+        <div class="flex flex-wrap justify-between items-center mb-4 pb-2 border-b border-gray-100 gap-2">
+            <h3 class="text-lg font-bold text-gray-800 flex items-center">
+                <i class="fa-solid fa-stamp text-indigo-600 mr-2"></i> ตรวจรับและอนุมัติสำเนาคะแนน (ฝ่ายวัดผล/วิชาการ)
+            </h3>
+            <span class="text-xs bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full font-bold border border-indigo-200">
+                ระบบจัดการล็อกคะแนนประจำภาคเรียน
+            </span>
+        </div>
+
+        <div class="flex flex-wrap items-end gap-4 mb-6 bg-gray-50 p-4 rounded-xl border border-gray-100">
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">ภาคเรียน/ปีการศึกษา:</label>
+                <select id="approveTermSelect" class="border border-gray-300 rounded-lg p-2 outline-none min-w-[140px] bg-white text-sm"></select>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">ช่วงเวลา:</label>
+                <select id="approvePeriodSelect" class="border border-gray-300 rounded-lg p-2 outline-none min-w-[140px] bg-white text-sm">
+                    <option value="ก่อนกลางภาค">ก่อนกลางภาค</option>
+                    <option value="หลังกลางภาค">หลังกลางภาค</option>
+                </select>
+            </div>
+            <button onclick="loadSubmissionTracker()" class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition flex items-center gap-2 shadow-md font-bold text-sm">
+                <i class="fa-solid fa-rotate"></i> โหลดข้อมูล/รีเฟรช
+            </button>
+        </div>
+
+        <div id="approveLoading" class="hidden text-center py-6 text-gray-500">
+            <div class="loader mb-3 mx-auto border-indigo-500"></div>
+            <p>กำลังโหลดรายวิชาที่ส่งสำเนา...</p>
+        </div>
+
+        <div id="approveResult" class="overflow-x-auto table-scrollbar mt-4">
+            <table class="w-full text-left border-collapse min-w-[800px] text-sm">
+                <thead>
+                    <tr class="bg-gray-100 text-gray-700 border-b border-gray-200 font-bold">
+                        <th class="p-3 w-16 text-center">ลำดับ</th>
+                        <th class="p-3 w-28">รหัสวิชา</th>
+                        <th class="p-3">ชื่อวิชา</th>
+                        <th class="p-3 w-24 text-center">ชั้น/ห้อง</th>
+                        <th class="p-3 w-40">ครูผู้สอน</th>
+                        <th class="p-3 w-36 text-center">วันที่ส่งสำเนา</th>
+                        <th class="p-3 w-32 text-center">สถานะ</th>
+                        <th class="p-3 text-center w-52">จัดการอนุมัติ</th>
+                    </tr>
+                </thead>
+                <tbody id="approveTableBody" class="divide-y divide-gray-100">
+                    <tr>
+                        <td colspan="8" class="p-8 text-center text-gray-400">กรุณากดปุ่ม "โหลดข้อมูล/รีเฟรช" เพื่อเริ่มต้น</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 
 
@@ -1191,9 +1350,9 @@ if(subjData.subjectCode === "CLUB") {
     mainTable.classList.add("min-w-[600px]");
     thead.innerHTML = `
     <tr class="border-b border-blue-200 text-blue-800 text-sm bg-green-50">
-        <th class="p-3 w-12 text-center">ลำดับ</th>
-        <th class="p-3 w-20">รหัส</th>
-        <th class="p-3 min-w-[150px]">ชื่อ - นามสกุล</th>
+        <th class="p-3 w-12 text-center sticky-col-1">ลำดับ</th>
+        <th class="p-3 w-20 sticky-col-2">รหัส</th>
+        <th class="p-3 min-w-[150px] sticky-col-3">ชื่อ - นามสกุล</th>
         <th class="p-3 w-16 text-center">ชั้น</th>
         <th class="p-3 w-16 text-center">ห้อง</th>
         <th class="p-3 text-center w-32">ผลประเมิน</th>
@@ -1206,9 +1365,9 @@ if(subjData.subjectCode === "CLUB") {
     mainTable.classList.add("min-w-[800px]");
     thead.innerHTML = `
     <tr class="border-b border-blue-200 text-blue-800 text-sm bg-blue-100/50">
-        <th class="p-3 w-12 text-center">เลขที่</th>
-        <th class="p-3 w-20">รหัส</th>
-        <th class="p-3 min-w-[150px]">ชื่อ - นามสกุล</th>
+        <th class="p-3 w-12 text-center sticky-col-1">เลขที่</th>
+        <th class="p-3 w-20 sticky-col-2">รหัส</th>
+        <th class="p-3 min-w-[150px] sticky-col-3">ชื่อ - นามสกุล</th>
         <th class="p-3 text-center">แนะแนว</th>
         <th class="p-3 text-center">กิจกรรมเพื่อสังคมฯ</th>
         <th class="p-3 text-center">ชุมนุม</th>
@@ -1222,28 +1381,31 @@ if(subjData.subjectCode === "CLUB") {
     mainTable.classList.add("min-w-[1200px]");
     thead.innerHTML = `
     <tr class="border-b border-gray-200 text-gray-700 text-sm">
-        <th class="p-3 w-12 text-center">เลขที่</th>
-        <th class="p-3 w-20">รหัส</th>
-        <th class="p-3 min-w-[150px]">ชื่อ - นามสกุล</th>
-        <th class="p-2 text-center input-cell"><input type="text" class="w-full text-center bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none text-gray-700 font-bold" placeholder=""></th>
-        <th class="p-2 text-center input-cell"><input type="text" class="w-full text-center bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none text-gray-700 font-bold" placeholder=""></th>
-        <th class="p-2 text-center input-cell"><input type="text" class="w-full text-center bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none text-gray-700 font-bold" placeholder=""></th>
-        <th class="p-2 text-center input-cell"><input type="text" class="w-full text-center bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none text-gray-700 font-bold" placeholder=""></th>
-        <th class="p-2 text-center input-cell"><input type="text" class="w-full text-center bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none text-gray-700 font-bold" placeholder=""></th>
-        <th class="p-2 text-center input-cell bg-gray-100"><input type="text" class="w-full text-center bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none text-gray-700 font-bold" placeholder=""></th>
-        <th class="p-2 text-center input-cell bg-gray-100"><input type="text" class="w-full text-center bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none text-gray-700 font-bold" placeholder=""></th>
-        <th class="p-2 text-center input-cell bg-gray-100"><input type="text" class="w-full text-center bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none text-gray-700 font-bold" placeholder=""></th>
-        <th class="p-2 text-center input-cell bg-gray-100"><input type="text" class="w-full text-center bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none text-gray-700 font-bold" placeholder=""></th>
-        <th class="p-2 text-center input-cell bg-gray-100"><input type="text" class="w-full text-center bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none text-gray-700 font-bold" placeholder=""></th>
+        <th class="p-3 w-12 text-center sticky-col-1">เลขที่</th>
+        <th class="p-3 w-20 sticky-col-2">รหัส</th>
+        <th class="p-3 min-w-[150px] sticky-col-3">ชื่อ - นามสกุล</th>
+        <th class="p-2 text-center input-cell"><input type="text" oninput="saveHeaders()" class="w-full text-center bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none text-gray-700 font-bold" placeholder=""></th>
+        <th class="p-2 text-center input-cell"><input type="text" oninput="saveHeaders()" class="w-full text-center bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none text-gray-700 font-bold" placeholder=""></th>
+        <th class="p-2 text-center input-cell"><input type="text" oninput="saveHeaders()" class="w-full text-center bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none text-gray-700 font-bold" placeholder=""></th>
+        <th class="p-2 text-center input-cell"><input type="text" oninput="saveHeaders()" class="w-full text-center bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none text-gray-700 font-bold" placeholder=""></th>
+        <th class="p-2 text-center input-cell"><input type="text" oninput="saveHeaders()" class="w-full text-center bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none text-gray-700 font-bold" placeholder=""></th>
+        <th class="p-2 text-center input-cell bg-gray-100"><input type="text" oninput="saveHeaders()" class="w-full text-center bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none text-gray-700 font-bold" placeholder=""></th>
+        <th class="p-2 text-center input-cell bg-gray-100"><input type="text" oninput="saveHeaders()" class="w-full text-center bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none text-gray-700 font-bold" placeholder=""></th>
+        <th class="p-2 text-center input-cell bg-gray-100"><input type="text" oninput="saveHeaders()" class="w-full text-center bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none text-gray-700 font-bold" placeholder=""></th>
+        <th class="p-2 text-center input-cell bg-gray-100"><input type="text" oninput="saveHeaders()" class="w-full text-center bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none text-gray-700 font-bold" placeholder=""></th>
+        <th class="p-2 text-center input-cell bg-gray-100"><input type="text" oninput="saveHeaders()" class="w-full text-center bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none text-gray-700 font-bold" placeholder=""></th>
         <th class="p-3 w-28 text-center bg-blue-50/80">สถานะ</th>
     </tr>`;
 }
 
 let targetRoom = subjData.subjectCode === "CLUB" ? subjData.subjectName : subjData.room;
 
-google.script.run.withSuccessHandler(function(students){
+google.script.run.withSuccessHandler(function(res){
 indicator.classList.add("hidden");
 select.disabled = false;
+const students = res.students;
+const submission = res.submission;
+currentLoadedSubmission = submission;
 document.getElementById("studentCount").innerText=students.length;
 const tbody=document.getElementById("studentTableBody");tbody.innerHTML="";
 
@@ -1260,9 +1422,9 @@ if(students.length===0){
             `;
             tbody.innerHTML+=`
             <tr class="border-b border-gray-100 hover:bg-green-50/50">
-                <td class="p-2 text-center text-gray-500">${student.no}</td>
-                <td class="p-2 font-mono student-id text-xs">${student.id}</td>
-                <td class="p-2 font-medium student-name text-xs md:text-sm whitespace-nowrap">${student.name}</td>
+                <td class="p-2 text-center text-gray-500 sticky-col-1">${student.no}</td>
+                <td class="p-2 font-mono student-id text-xs sticky-col-2">${student.id}</td>
+                <td class="p-2 font-medium student-name text-xs md:text-sm whitespace-nowrap sticky-col-3">${student.name}</td>
                 <td class="p-2 text-center text-gray-500 text-xs">${student.level}</td>
                 <td class="p-2 text-center text-gray-500 text-xs">${student.room}</td>
                 <td class="p-2">${makeSelect(student.status)}</td>
@@ -1287,9 +1449,9 @@ if(students.length===0){
 
             tbody.innerHTML+=`
             <tr class="border-b border-gray-100 hover:bg-blue-50/50">
-                <td class="p-2 text-center text-gray-500">${student.no}</td>
-                <td class="p-2 font-mono student-id text-xs">${student.id}</td>
-                <td class="p-2 font-medium student-name text-xs md:text-sm whitespace-nowrap">${student.name}</td>
+                <td class="p-2 text-center text-gray-500 sticky-col-1">${student.no}</td>
+                <td class="p-2 font-mono student-id text-xs sticky-col-2">${student.id}</td>
+                <td class="p-2 font-medium student-name text-xs md:text-sm whitespace-nowrap sticky-col-3">${student.name}</td>
                 <td class="p-2">${makeSelect(student.s1, 'score-1')}</td>
                 <td class="p-2">${makeSelect(student.s2, 'score-2')}</td>
                 <td class="p-2">${makeDisabledSelect(student.s3)}</td>
@@ -1306,16 +1468,18 @@ if(students.length===0){
             </tr>`;
         } else {
             let statSelect=`<select class="w-full border rounded p-1 text-center status-select ${student.status!=='ปกติ'&&student.status?'bg-red-50 text-red-600 font-bold':''}" onchange="updateStyle(this)">
-            <option value="ปกติ" ${student.status==='ปกติ'?'selected':''}>ปกติ</option>
+            <option value="ปกติ" ${student.status==='ปกติ'||!student.status?'selected':''}>ปกติ</option>
             <option value="ซ" class="text-red-500 font-bold" ${student.status==='ซ'?'selected':''}>ติด ซ</option>
-            <option value="มส" class="text-red-500" ${student.status==='มส'?'selected':''}>มส.</option>
-            <option value="มผ" class="text-orange-500" ${student.status==='มผ'?'selected':''}>มผ.</option>
+            <option value="0" class="text-red-500 font-bold" ${student.status==='0'?'selected':''}>0</option>
+            <option value="ร" class="text-orange-500 font-bold" ${student.status==='ร'?'selected':''}>ร</option>
+            <option value="มส." class="text-red-500" ${student.status==='มส.'?'selected':''}>มส.</option>
+            <option value="มผ." class="text-orange-500" ${student.status==='มผ.'?'selected':''}>มผ.</option>
             </select>`;
             tbody.innerHTML+=`
             <tr class="border-b border-gray-100 hover:bg-blue-50/50 ${student.status!=='ปกติ'&&student.status?'bg-red-50/30':''}">
-            <td class="p-2 text-center text-gray-500">${student.no}</td>
-            <td class="p-2 font-mono student-id text-xs">${student.id}</td>
-            <td class="p-2 font-medium student-name text-xs md:text-sm whitespace-nowrap">${student.name}</td>
+            <td class="p-2 text-center text-gray-500 sticky-col-1">${student.no}</td>
+            <td class="p-2 font-mono student-id text-xs sticky-col-2">${student.id}</td>
+            <td class="p-2 font-medium student-name text-xs md:text-sm whitespace-nowrap sticky-col-3">${student.name}</td>
             <td class="p-1"><input type="number" class="w-full border rounded p-1 text-center score-1" value="${student.s1!==undefined?student.s1:''}"></td>
             <td class="p-1"><input type="number" class="w-full border rounded p-1 text-center score-2" value="${student.s2!==undefined?student.s2:''}"></td>
             <td class="p-1"><input type="number" class="w-full border rounded p-1 text-center score-3" value="${student.s3!==undefined?student.s3:''}"></td>
@@ -1332,6 +1496,8 @@ if(students.length===0){
     });
 }
 document.getElementById("gradingSection").classList.remove("hidden");
+updateUIForLockState(submission, subjData);
+loadHeaders();
 }).getStudentsByRoom(subjData.classLevel, targetRoom, currentTerm, currentYear, subjData.subjectCode, currentPeriod);
 }
 
@@ -1386,6 +1552,13 @@ if(!filters.terms.includes(curTY)) filters.terms.unshift(curTY);
         remTermSelect.innerHTML = '';
         filters.terms.forEach(t => remTermSelect.appendChild(new Option(`เทอม ${t}`, t)));
         remTermSelect.value = curTY;
+    }
+
+    let approveTermSelect = document.getElementById("approveTermSelect");
+    if (approveTermSelect) {
+        approveTermSelect.innerHTML = '';
+        filters.terms.forEach(t => approveTermSelect.appendChild(new Option(`เทอม ${t}`, t)));
+        approveTermSelect.value = curTY;
     }
 
 filters.terms.forEach(t=>{
@@ -2636,6 +2809,507 @@ function exportRemedialPDF() {
         btn.innerHTML = orig;
         btn.disabled = false;
     });
+}
+
+
+// ==========================================
+// ส่วนเพิ่มเติม: ระบบบันทึกสำเนาคะแนน (Score Submissions)
+// ==========================================
+let currentLoadedSubmission = null;
+
+function updateUIForLockState(submission, subjData) {
+    const isLocked = (submission.status === "Submitted" || submission.status === "Approved");
+    
+    // 1. จัดการ Badge สถานะ
+    const badge = document.getElementById("submissionBadge");
+    if (badge) {
+        badge.classList.remove("hidden", "bg-gray-100", "text-gray-800", "border-gray-200", "bg-orange-50", "text-orange-700", "border-orange-200", "bg-green-50", "text-green-700", "border-green-200", "bg-red-50", "text-red-700", "border-red-200");
+        
+        if (submission.status === "Submitted") {
+            badge.innerText = "ส่งสำเนาแล้ว - รอฝ่ายวิชาการอนุมัติ";
+            badge.classList.add("bg-orange-50", "text-orange-700", "border-orange-200");
+            badge.classList.remove("hidden");
+        } else if (submission.status === "Approved") {
+            badge.innerText = "อนุมัติแล้ว - ล็อกคะแนน";
+            badge.classList.add("bg-green-50", "text-green-700", "border-green-200");
+            badge.classList.remove("hidden");
+        } else if (submission.status === "Rejected") {
+            badge.innerText = "ถูกตีกลับแก้ไข";
+            badge.classList.add("bg-red-50", "text-red-700", "border-red-200");
+            badge.classList.remove("hidden");
+        } else {
+            badge.innerText = "แบบร่าง (ยังไม่ส่งสำเนา)";
+            badge.classList.add("bg-gray-100", "text-gray-800", "border-gray-200");
+            badge.classList.remove("hidden");
+        }
+    }
+
+    // 2. จัดการเหตุผลการส่งกลับ (ถ้ามี)
+    const rejectReasonText = document.getElementById("rejectReasonText");
+    if (rejectReasonText) {
+        if (submission.status === "Rejected" && submission.reject_reason) {
+            rejectReasonText.innerText = "ตีกลับ: " + submission.reject_reason;
+            rejectReasonText.classList.remove("hidden");
+        } else {
+            rejectReasonText.classList.add("hidden");
+        }
+    }
+
+    // 3. ซ่อน/แสดงปุ่มต่างๆ
+    const saveBtn = document.getElementById("saveBtn");
+    const submitCopyBtn = document.getElementById("submitCopyBtn");
+    const printBtn = document.getElementById("printBtn");
+
+    if (isLocked) {
+        if (saveBtn) saveBtn.classList.add("hidden");
+        if (submitCopyBtn) submitCopyBtn.classList.add("hidden");
+        if (printBtn) printBtn.classList.remove("hidden");
+    } else {
+        if (saveBtn) saveBtn.classList.remove("hidden");
+        if (submitCopyBtn) submitCopyBtn.classList.remove("hidden");
+        if (printBtn) printBtn.classList.remove("hidden");
+    }
+
+    // 4. ล็อกช่องคะแนน
+    document.querySelectorAll('#studentTableBody tr input, #studentTableBody tr select').forEach(el => {
+        el.disabled = isLocked;
+        if (isLocked) {
+            el.classList.add("bg-gray-100", "text-gray-500", "cursor-not-allowed");
+        } else {
+            el.classList.remove("bg-gray-100", "text-gray-500", "cursor-not-allowed");
+        }
+    });
+
+    // 5. ล็อกช่องหัวตาราง
+    document.querySelectorAll('#tableHeader input').forEach(el => {
+        el.disabled = isLocked;
+        if (isLocked) {
+            el.classList.add("bg-gray-50", "text-gray-500", "cursor-not-allowed");
+        } else {
+            el.classList.remove("bg-gray-50", "text-gray-500", "cursor-not-allowed");
+        }
+    });
+}
+
+function saveHeaders() {
+    const select = document.getElementById("subjectSelect");
+    if (!select || select.value === "") return;
+    const subjData = JSON.parse(select.value);
+    let targetRoom = subjData.subjectCode === "CLUB" ? subjData.subjectName : subjData.room;
+    
+    let headerValues = [];
+    document.querySelectorAll('#tableHeader input').forEach(input => {
+        headerValues.push(input.value);
+    });
+    
+    let key = 'headers_' + currentTerm + '_' + currentYear + '_' + currentPeriod + '_' + subjData.subjectCode + '_' + targetRoom;
+    localStorage.setItem(key, JSON.stringify(headerValues));
+}
+
+function loadHeaders() {
+    const select = document.getElementById("subjectSelect");
+    if (!select || select.value === "") return;
+    const subjData = JSON.parse(select.value);
+    let targetRoom = subjData.subjectCode === "CLUB" ? subjData.subjectName : subjData.room;
+    
+    let key = 'headers_' + currentTerm + '_' + currentYear + '_' + currentPeriod + '_' + subjData.subjectCode + '_' + targetRoom;
+    let stored = localStorage.getItem(key);
+    if (stored) {
+        let headerValues = JSON.parse(stored);
+        let inputs = document.querySelectorAll('#tableHeader input');
+        inputs.forEach((input, index) => {
+            if (headerValues[index] !== undefined) {
+                input.value = headerValues[index];
+            }
+        });
+    }
+}
+
+function openSubmitCopyModal() {
+    if (confirm("ต้องการส่งสำเนาคะแนนสำหรับรายวิชานี้ใช่หรือไม่?\n\n* หลังจากส่งแล้ว คะแนนจะถูกล็อกไม่ให้แก้ไขได้อีก ยกเว้นฝ่ายวิชาการจะส่งกลับมาให้แก้ไข")) {
+        submitScoreCopyData();
+    }
+}
+
+function submitScoreCopyData() {
+    if (currentSystemStatus === "CLOSED") {
+        alert("ขออภัย! ผู้ดูแลระบบปิดการทำงานของระบบชั่วคราวแล้ว");
+        return;
+    }
+    
+    const btn = document.getElementById("submitCopyBtn");
+    const origText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังส่งสำเนา...';
+
+    const select = document.getElementById("subjectSelect");
+    const subjData = JSON.parse(select.value);
+    let targetRoom = subjData.subjectCode === "CLUB" ? subjData.subjectName : subjData.room;
+    
+    // อ่านคะแนน
+    let studentDataArr = [];
+    document.querySelectorAll('#studentTableBody tr').forEach(tr => {
+        studentDataArr.push({
+            id: tr.querySelector('.student-id').innerText,
+            name: tr.querySelector('.student-name').innerText,
+            s1: tr.querySelector('.score-1') ? tr.querySelector('.score-1').value : "",
+            s2: tr.querySelector('.score-2') ? tr.querySelector('.score-2').value : "",
+            s3: tr.querySelector('.score-3') ? tr.querySelector('.score-3').value : "",
+            s4: tr.querySelector('.score-4') ? tr.querySelector('.score-4').value : "",
+            s5: tr.querySelector('.score-5') ? tr.querySelector('.score-5').value : "",
+            s6: tr.querySelector('.score-6') ? tr.querySelector('.score-6').value : "",
+            s7: tr.querySelector('.score-7') ? tr.querySelector('.score-7').value : "",
+            s8: tr.querySelector('.score-8') ? tr.querySelector('.score-8').value : "",
+            s9: tr.querySelector('.score-9') ? tr.querySelector('.score-9').value : "",
+            s10: tr.querySelector('.score-10') ? tr.querySelector('.score-10').value : "",
+            status: tr.querySelector('.status-select') ? tr.querySelector('.status-select').value : "ปกติ"
+        });
+    });
+
+    // อ่านหัวข้อ
+    let headers = [];
+    document.querySelectorAll('#tableHeader input').forEach(input => {
+        headers.push(input.value || "");
+    });
+
+    google.script.run.withSuccessHandler(function(res) {
+        btn.disabled = false;
+        btn.innerHTML = origText;
+        if (res.success) {
+            showToast("สำเร็จ", "ส่งสำเนาคะแนนและล็อกข้อมูลเรียบร้อยแล้ว");
+            loadStudents();
+        } else {
+            alert("เกิดข้อผิดพลาด: " + res.message);
+        }
+    }).submitScoreCopy({
+        term: currentTerm,
+        year: currentYear,
+        period: currentPeriod,
+        subjectCode: subjData.subjectCode,
+        subjectName: subjData.subjectName,
+        classLevel: subjData.classLevel,
+        room: subjData.room,
+        teacher: currentTeacherName,
+        students: studentDataArr,
+        headers: headers
+    });
+}
+
+function printScoreCopy() {
+    const select = document.getElementById("subjectSelect");
+    if (select.value === "") return;
+    const subjData = JSON.parse(select.value);
+    let targetRoom = subjData.subjectCode === "CLUB" ? subjData.subjectName : subjData.room;
+    let clLevel = subjData.subjectCode === "CLUB" ? "รวม" : subjData.classLevel.toString().replace(/[ม\\.]/g, '').trim();
+
+    // 1. อ่านข้อมูลหัวข้อคอลัมน์ (Headers)
+    let headers = ["", "", "", "", "", "", "", "", "", ""];
+    if (currentLoadedSubmission && currentLoadedSubmission.snapshot_grades && currentLoadedSubmission.snapshot_grades.headers) {
+        headers = currentLoadedSubmission.snapshot_grades.headers;
+    } else {
+        let key = 'headers_' + currentTerm + '_' + currentYear + '_' + currentPeriod + '_' + subjData.subjectCode + '_' + targetRoom;
+        let stored = localStorage.getItem(key);
+        if (stored) headers = JSON.parse(stored);
+    }
+
+    // กรองหาคอลัมน์ที่ใช้งาน
+    let activeCols = [];
+    if (subjData.subjectCode === "CLUB") {
+        activeCols = [];
+    } else if (subjData.subjectCode === "ACT99") {
+        activeCols = [
+            { index: 1, name: "แนะแนว" },
+            { index: 2, name: "กิจกรรมเพื่อสังคม" },
+            { index: 3, name: "ชุมนุม" },
+            { index: 4, name: "รักการอ่าน" }
+        ];
+    } else {
+        headers.forEach((h, idx) => {
+            if (h && h.trim() !== "") {
+                activeCols.push({ index: idx + 1, name: h });
+            }
+        });
+        if (activeCols.length === 0) {
+            for (let i = 1; i <= 5; i++) {
+                activeCols.push({ index: i, name: "ช่อง " + i });
+            }
+        }
+    }
+
+    // 2. ดึงข้อมูลรายชื่อและคะแนนนักเรียน
+    let students = [];
+    document.querySelectorAll('#studentTableBody tr').forEach(tr => {
+        let sData = {
+            no: tr.cells[0].innerText,
+            id: tr.querySelector('.student-id').innerText,
+            name: tr.querySelector('.student-name').innerText,
+            status: tr.querySelector('.status-select') ? tr.querySelector('.status-select').value : "ปกติ"
+        };
+        for (let i = 1; i <= 10; i++) {
+            let sInput = tr.querySelector('.score-' + i);
+            sData['s' + i] = sInput ? sInput.value : "";
+        }
+        students.push(sData);
+    });
+
+    // 3. ประกอบโครงสร้างเอกสารพิมพ์
+    let titleStr = "แบบบันทึกสำเนาคะแนนเก็บนักเรียน (สำเนา ปพ.5)";
+    if (subjData.subjectCode === "CLUB") titleStr = "แบบบันทึกผลการประเมินกิจกรรมชุมนุม";
+    else if (subjData.subjectCode === "ACT99") titleStr = "แบบบันทึกผลกิจกรรมพัฒนาผู้เรียน";
+
+    let html = `
+        <div style="font-family: 'Sarabun', sans-serif; padding: 10px;">
+            <div style="text-align: center; margin-bottom: 25px;">
+                <h2 style="font-size: 20px; font-weight: bold; margin: 0; color: #000;">${titleStr}</h2>
+                <h3 style="font-size: 16px; font-weight: bold; margin: 5px 0 0 0;">โรงเรียนมกุฎเมืองราชวิทยาลัย</h3>
+                <p style="font-size: 14px; margin: 5px 0 15px 0;">
+                    <b>ภาคเรียนที่:</b> ${currentTerm} <b>ปีการศึกษา:</b> ${currentYear} <b>ช่วงเวลา:</b> ${currentPeriod}
+                </p>
+                <div style="text-align: left; font-size: 13px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; border: 1px solid #cbd5e1; padding: 12px; border-radius: 8px; background-color: #f8fafc; margin-bottom: 20px;">
+                    <div><b>รายวิชา:</b> ${subjData.subjectCode !== 'CLUB' ? subjData.subjectCode + ' ' : ''}${subjData.subjectName}</div>
+                    <div><b>ชั้น/ห้อง:</b> ${subjData.subjectCode === 'CLUB' ? 'ทุกห้อง' : 'ม.' + clLevel + '/' + subjData.room}</div>
+                    <div><b>ครูผู้สอน:</b> ${currentTeacherName}</div>
+                    <div><b>จำนวนนักเรียน:</b> ${students.length} คน</div>
+                    \${currentLoadedSubmission && currentLoadedSubmission.submitted_at ? `<div><b>วันที่ส่งสำเนา:</b> \${currentLoadedSubmission.submitted_at}</div>` : ''}
+                    <div><b>สถานะสำเนา:</b> \${currentLoadedSubmission ? (currentLoadedSubmission.status === 'Approved' ? 'อนุมัติแล้ว' : currentLoadedSubmission.status === 'Submitted' ? 'ส่งแล้ว รออนุมัติ' : 'แบบร่าง') : 'แบบร่าง'}</div>
+                </div>
+            </div>
+
+            <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; font-size: 12px; text-align: center;">
+                <thead>
+                    <tr style="background-color: #f1f5f9; border-bottom: 1px solid #000;">
+                        <th style="border: 1px solid #000; width: 45px; padding: 6px; font-weight: bold;">เลขที่</th>
+                        <th style="border: 1px solid #000; width: 85px; padding: 6px; font-weight: bold;">เลขประจำตัว</th>
+                        <th style="border: 1px solid #000; text-align: left; padding: 6px 10px; font-weight: bold;">ชื่อ - นามสกุล</th>
+                        \${activeCols.map(col => `<th style="border: 1px solid #000; padding: 6px; font-weight: bold; min-width: 50px;">\${col.name}</th>`).join('')}
+                        <th style="border: 1px solid #000; width: 90px; padding: 6px; font-weight: bold;">ผลการประเมิน</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    students.forEach(st => {
+        html += `
+            <tr style="border-bottom: 1px solid #000;">
+                <td style="border: 1px solid #000; padding: 5px;">\${st.no}</td>
+                <td style="border: 1px solid #000; padding: 5px; font-family: monospace;">\${st.id}</td>
+                <td style="border: 1px solid #000; padding: 5px 10px; text-align: left; white-space: nowrap;">\${st.name}</td>
+                \${activeCols.map(col => {
+                    let val = st['s' + col.index];
+                    return `<td style="border: 1px solid #000; padding: 5px;">\${val !== undefined && val !== null ? val : ''}</td>`;
+                }).join('')}
+                <td style="border: 1px solid #000; padding: 5px; font-weight: bold; \${st.status !== 'ปกติ' && st.status ? 'color: red;' : ''}">\${st.status || 'ปกติ'}</td>
+            </tr>
+        `;
+    });
+
+    html += `
+                </tbody>
+            </table>
+
+            <div style="margin-top: 35px; page-break-inside: avoid; display: grid; grid-template-columns: 1fr 1fr; gap: 30px; font-size: 13px; text-align: center;">
+                <div style="padding: 10px;">
+                    ลงชื่อ.................................................................ครูผู้สอน<br>
+                    ( \${currentTeacherName} )<br>
+                    ตำแหน่ง.................................................................<br>
+                    ......./......./.......
+                </div>
+                <div style="padding: 10px;">
+                    ลงชื่อ.................................................................หัวหน้ากลุ่มสาระการเรียนรู้<br>
+                    (...................................................................)<br>
+                    ตำแหน่ง.................................................................<br>
+                    ......./......./.......
+                </div>
+            </div>
+            
+            <div style="margin-top: 25px; page-break-inside: avoid; text-align: center; font-size: 13px;">
+                <div style="display: inline-block; width: 320px; padding: 10px;">
+                    ลงชื่อ.................................................................หัวหน้างานวัดผล/วิชาการ<br>
+                    (...................................................................)<br>
+                    ......./......./.......
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.getElementById("printArea").innerHTML = html;
+    document.getElementById("printPreviewModal").classList.remove("hidden");
+}
+
+function closePrintPreviewModal() {
+    document.getElementById("printPreviewModal").classList.add("hidden");
+}
+
+function triggerBrowserPrint() {
+    const printArea = document.getElementById("printArea");
+    const w = window.open();
+    w.document.write(\`
+        <html>
+            <head>
+                <title>พิมพ์สำเนาคะแนน</title>
+                <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
+                <style>
+                    body { font-family: 'Sarabun', sans-serif; padding: 20px; background: white; }
+                    @media print {
+                        body { padding: 0; }
+                    }
+                </style>
+            </head>
+            <body>
+                \${printArea.innerHTML}
+                <script>
+                    window.onload = function() {
+                        window.print();
+                        setTimeout(function() { window.close(); }, 500);
+                    };
+                <\/script>
+            </body>
+        </html>
+    \`);
+    w.document.close();
+}
+
+function downloadScoreCopyPDF() {
+    const element = document.getElementById('printArea');
+    const select = document.getElementById("subjectSelect");
+    const subjData = JSON.parse(select.value);
+    const filename = \`สำเนาคะแนน_\${subjData.subjectCode}_ห้อง_\${subjData.room}_เทอม_\${currentTerm}-\\${currentYear}.pdf\`;
+    
+    html2pdf().set({
+        margin: [0.5, 0.5, 0.5, 0.5],
+        filename: filename,
+        image: { type: 'jpeg', quality: 1.0 },
+        html2canvas: { scale: 2, useCORS: true, logging: false },
+        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+    }).from(element).save();
+}
+
+
+// ==========================================
+// ส่วนเพิ่มเติม: ระบบตรวจสอบและอนุมัติสำหรับวิชาการ
+// ==========================================
+function loadSubmissionTracker() {
+    const termVal = document.getElementById("approveTermSelect").value;
+    const period = document.getElementById("approvePeriodSelect").value;
+    if (!termVal) return;
+
+    const parts = termVal.split('/');
+    const term = parts[0];
+    const year = parts[1];
+
+    const loader = document.getElementById("approveLoading");
+    const tbody = document.getElementById("approveTableBody");
+
+    loader.classList.remove("hidden");
+    tbody.innerHTML = '';
+
+    google.script.run.withSuccessHandler(function(res) {
+        loader.classList.add("hidden");
+        if (res.success) {
+            const list = res.submissions;
+            if (list.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="p-8 text-center text-gray-500">ไม่มีรายวิชาใดส่งสำเนาคะแนนเข้ามาในภาคเรียนนี้</td></tr>`;
+                return;
+            }
+
+            list.forEach((sub, index) => {
+                let statusBadge = "";
+                if (sub.status === "Submitted") {
+                    statusBadge = `<span class="bg-orange-100 text-orange-700 px-2.5 py-1 rounded-full text-xs font-bold border border-orange-200">รออนุมัติ</span>`;
+                } else if (sub.status === "Approved") {
+                    statusBadge = `<span class="bg-green-100 text-green-700 px-2.5 py-1 rounded-full text-xs font-bold border border-green-200">อนุมัติแล้ว</span>`;
+                } else if (sub.status === "Rejected") {
+                    statusBadge = `<span class="bg-red-100 text-red-700 px-2.5 py-1 rounded-full text-xs font-bold border border-red-200" title="เหตุผล: ${sub.reject_reason || ''}">ตีกลับแก้ไข</span>`;
+                }
+
+                let clLevel = sub.class_level.toString().replace(/[ม\\.]/g, '').trim();
+                let roomStr = sub.subject_code === "CLUB" ? "รวม" : "ม." + clLevel + "/" + sub.room;
+
+                let actionHtml = "";
+                if (sub.status === "Submitted") {
+                    actionHtml = `
+                        <div class="flex gap-2 justify-center">
+                            <button onclick="adminApproveSubmission('${sub.subject_code}', '${sub.room}')" class="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded font-bold text-xs transition shadow-sm">
+                                อนุมัติ
+                            </button>
+                            <button onclick="adminRejectSubmission('${sub.subject_code}', '${sub.room}')" class="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded font-bold text-xs transition shadow-sm">
+                                ตีกลับ
+                            </button>
+                        </div>
+                    `;
+                } else if (sub.status === "Approved") {
+                    actionHtml = `
+                        <div class="flex gap-2 justify-center">
+                            <button onclick="adminRejectSubmission('${sub.subject_code}', '${sub.room}', true)" class="px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded font-bold text-xs transition shadow-sm">
+                                ปลดล็อก/ตีกลับ
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    actionHtml = `<span class="text-xs text-gray-400 font-medium">รอครูแก้ไข</span>`;
+                }
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-gray-50/50">
+                        <td class="p-3 text-center text-gray-500 font-mono">${index + 1}</td>
+                        <td class="p-3 font-bold font-mono text-gray-700">${sub.subject_code}</td>
+                        <td class="p-3 font-medium text-gray-800">${sub.subject_name}</td>
+                        <td class="p-3 text-center font-semibold text-gray-600">${roomStr}</td>
+                        <td class="p-3 text-gray-600">${sub.teacher_name}</td>
+                        <td class="p-3 text-center text-xs text-gray-500 font-mono">${sub.submitted_at || '-'}</td>
+                        <td class="p-3 text-center">${statusBadge}</td>
+                        <td class="p-3 text-center">${actionHtml}</td>
+                    </tr>
+                `;
+            });
+        } else {
+            tbody.innerHTML = `<tr><td colspan="8" class="p-8 text-center text-red-500 font-bold">เกิดข้อผิดพลาด: ${res.message}</td></tr>`;
+        }
+    }).adminGetSubmissions(term, year, period);
+}
+
+function adminApproveSubmission(subjectCode, room) {
+    if (!confirm("ยืนยันการอนุมัติสำเนาคะแนนและล็อกวิชานี้ใช่หรือไม่?\n\n* หลังจากอนุมัติแล้ว คุณครูจะไม่สามารถแก้ไขคะแนนได้อีก")) return;
+
+    const termVal = document.getElementById("approveTermSelect").value;
+    const period = document.getElementById("approvePeriodSelect").value;
+    const parts = termVal.split('/');
+    const term = parts[0];
+    const year = parts[1];
+
+    google.script.run.withSuccessHandler(function(res) {
+        if (res.success) {
+            showToast("อนุมัติแล้ว", "อนุมัติสำเนาคะแนนและทำการล็อกคะแนนเรียบร้อยแล้ว");
+            loadSubmissionTracker();
+        } else {
+            alert("เกิดข้อผิดพลาด: " + res.message);
+        }
+    }).adminUpdateSubmission(term, year, period, subjectCode, room, "Approved", "");
+}
+
+function adminRejectSubmission(subjectCode, room, wasApproved = false) {
+    let msg = wasApproved ? "ต้องการปลดล็อกคะแนนรายวิชานี้เพื่อให้ครูเข้ามาแก้ไขใหม่ใช่หรือไม่?" : "ระบุเหตุผลการตีกลับแก้ไข:";
+    let reason = prompt(msg, "");
+    if (reason === null) return; // กดยกเลิก
+    if (!wasApproved && reason.trim() === "") {
+        alert("กรุณาระบุเหตุผลการตีกลับแก้ไข!");
+        return;
+    }
+
+    const termVal = document.getElementById("approveTermSelect").value;
+    const period = document.getElementById("approvePeriodSelect").value;
+    const parts = termVal.split('/');
+    const term = parts[0];
+    const year = parts[1];
+
+    google.script.run.withSuccessHandler(function(res) {
+        if (res.success) {
+            showToast("ส่งกลับเรียบร้อย", "ส่งวิชานี้กลับไปให้แก้ไขและปลดล็อกเรียบร้อยแล้ว");
+            loadSubmissionTracker();
+        } else {
+            alert("เกิดข้อผิดพลาด: " + res.message);
+        }
+    }).adminUpdateSubmission(term, year, period, subjectCode, room, "Rejected", reason);
 }
 
 

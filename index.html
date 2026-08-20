@@ -20,6 +20,58 @@ body{font-family:'Sarabun',sans-serif;background-color:#f3f4f6;}
 .status-danger{color:#ef4444;font-weight:bold;}
 .status-warning{color:#f97316;font-weight:bold;}
 .input-cell{min-width:60px;}
+
+.sticky-col-1 {
+    position: sticky;
+    left: 0;
+    z-index: 10;
+}
+.sticky-col-2 {
+    position: sticky;
+    left: 48px;
+    z-index: 10;
+}
+.sticky-col-3 {
+    position: sticky;
+    left: 128px;
+    z-index: 10;
+    box-shadow: 2px 0 5px -2px rgba(0,0,0,0.15);
+}
+/* Default backgrounds for body cells */
+tbody td.sticky-col-1, tbody td.sticky-col-2, tbody td.sticky-col-3 {
+    background-color: #fff;
+}
+/* Hover backgrounds */
+tr:hover td.sticky-col-1, tr:hover td.sticky-col-2, tr:hover td.sticky-col-3 {
+    background-color: #f1f5f9 !important;
+}
+/* Header backgrounds */
+thead th.sticky-col-1, thead th.sticky-col-2, thead th.sticky-col-3 {
+    z-index: 30;
+    background-color: #f8fafc;
+}
+/* Specific color schemes for CLUB / ACT99 */
+.bg-green-50 th.sticky-col-1, .bg-green-50 th.sticky-col-2, .bg-green-50 th.sticky-col-3 {
+    background-color: #f0fdf4 !important;
+}
+.bg-blue-100\/50 th.sticky-col-1, .bg-blue-100\/50 th.sticky-col-2, .bg-blue-100\/50 th.sticky-col-3 {
+    background-color: #eff6ff !important;
+}
+/* Special row backgrounds like bg-red-50/30 */
+tr.bg-red-50\/30 td.sticky-col-1, tr.bg-red-50\/30 td.sticky-col-2, tr.bg-red-50\/30 td.sticky-col-3 {
+    background-color: #fef2f2 !important;
+}
+tr.bg-red-50\/30:hover td.sticky-col-1, tr.bg-red-50\/30:hover td.sticky-col-2, tr.bg-red-50\/30:hover td.sticky-col-3 {
+    background-color: #fee2e2 !important;
+}
+/* Special row backgrounds for CLUB green rows on hover */
+tr.hover\:bg-green-50\/50:hover td.sticky-col-1, tr.hover\:bg-green-50\/50:hover td.sticky-col-2, tr.hover\:bg-green-50\/50:hover td.sticky-col-3 {
+    background-color: #f0fdf4 !important;
+}
+/* Special row backgrounds for normal subject blue hover rows */
+tr.hover\:bg-blue-50\/50:hover td.sticky-col-1, tr.hover\:bg-blue-50\/50:hover td.sticky-col-2, tr.hover\:bg-blue-50\/50:hover td.sticky-col-3 {
+    background-color: #eff6ff !important;
+}
 </style>
 </head>
 <body class="text-gray-800 antialiased">
@@ -1130,9 +1182,9 @@ if(subjData.subjectCode === "CLUB") {
     mainTable.classList.add("min-w-[600px]");
     thead.innerHTML = `
     <tr class="border-b border-blue-200 text-blue-800 text-sm bg-green-50">
-        <th class="p-3 w-12 text-center">ลำดับ</th>
-        <th class="p-3 w-20">รหัส</th>
-        <th class="p-3 min-w-[150px]">ชื่อ - นามสกุล</th>
+        <th class="p-3 w-12 text-center sticky-col-1">ลำดับ</th>
+        <th class="p-3 w-20 sticky-col-2">รหัส</th>
+        <th class="p-3 min-w-[150px] sticky-col-3">ชื่อ - นามสกุล</th>
         <th class="p-3 w-16 text-center">ชั้น</th>
         <th class="p-3 w-16 text-center">ห้อง</th>
         <th class="p-3 text-center w-32">ผลประเมิน</th>
@@ -1145,9 +1197,9 @@ if(subjData.subjectCode === "CLUB") {
     mainTable.classList.add("min-w-[800px]");
     thead.innerHTML = `
     <tr class="border-b border-blue-200 text-blue-800 text-sm bg-blue-100/50">
-        <th class="p-3 w-12 text-center">เลขที่</th>
-        <th class="p-3 w-20">รหัส</th>
-        <th class="p-3 min-w-[150px]">ชื่อ - นามสกุล</th>
+        <th class="p-3 w-12 text-center sticky-col-1">เลขที่</th>
+        <th class="p-3 w-20 sticky-col-2">รหัส</th>
+        <th class="p-3 min-w-[150px] sticky-col-3">ชื่อ - นามสกุล</th>
         <th class="p-3 text-center">แนะแนว</th>
         <th class="p-3 text-center">กิจกรรมเพื่อสังคมฯ</th>
         <th class="p-3 text-center">ชุมนุม</th>
@@ -1161,19 +1213,19 @@ if(subjData.subjectCode === "CLUB") {
     mainTable.classList.add("min-w-[1200px]");
     thead.innerHTML = `
     <tr class="border-b border-gray-200 text-gray-700 text-sm">
-        <th class="p-3 w-12 text-center">เลขที่</th>
-        <th class="p-3 w-20">รหัส</th>
-        <th class="p-3 min-w-[150px]">ชื่อ - นามสกุล</th>
-        <th class="p-2 text-center input-cell"><input type="text" class="w-full text-center bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none text-gray-700 font-bold" placeholder=""></th>
-        <th class="p-2 text-center input-cell"><input type="text" class="w-full text-center bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none text-gray-700 font-bold" placeholder=""></th>
-        <th class="p-2 text-center input-cell"><input type="text" class="w-full text-center bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none text-gray-700 font-bold" placeholder=""></th>
-        <th class="p-2 text-center input-cell"><input type="text" class="w-full text-center bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none text-gray-700 font-bold" placeholder=""></th>
-        <th class="p-2 text-center input-cell"><input type="text" class="w-full text-center bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none text-gray-700 font-bold" placeholder=""></th>
-        <th class="p-2 text-center input-cell bg-gray-100"><input type="text" class="w-full text-center bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none text-gray-700 font-bold" placeholder=""></th>
-        <th class="p-2 text-center input-cell bg-gray-100"><input type="text" class="w-full text-center bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none text-gray-700 font-bold" placeholder=""></th>
-        <th class="p-2 text-center input-cell bg-gray-100"><input type="text" class="w-full text-center bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none text-gray-700 font-bold" placeholder=""></th>
-        <th class="p-2 text-center input-cell bg-gray-100"><input type="text" class="w-full text-center bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none text-gray-700 font-bold" placeholder=""></th>
-        <th class="p-2 text-center input-cell bg-gray-100"><input type="text" class="w-full text-center bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none text-gray-700 font-bold" placeholder=""></th>
+        <th class="p-3 w-12 text-center sticky-col-1">เลขที่</th>
+        <th class="p-3 w-20 sticky-col-2">รหัส</th>
+        <th class="p-3 min-w-[150px] sticky-col-3">ชื่อ - นามสกุล</th>
+        <th class="p-2 text-center input-cell"><input type="text" oninput="saveHeaders()" class="w-full text-center bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none text-gray-700 font-bold" placeholder=""></th>
+        <th class="p-2 text-center input-cell"><input type="text" oninput="saveHeaders()" class="w-full text-center bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none text-gray-700 font-bold" placeholder=""></th>
+        <th class="p-2 text-center input-cell"><input type="text" oninput="saveHeaders()" class="w-full text-center bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none text-gray-700 font-bold" placeholder=""></th>
+        <th class="p-2 text-center input-cell"><input type="text" oninput="saveHeaders()" class="w-full text-center bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none text-gray-700 font-bold" placeholder=""></th>
+        <th class="p-2 text-center input-cell"><input type="text" oninput="saveHeaders()" class="w-full text-center bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none text-gray-700 font-bold" placeholder=""></th>
+        <th class="p-2 text-center input-cell bg-gray-100"><input type="text" oninput="saveHeaders()" class="w-full text-center bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none text-gray-700 font-bold" placeholder=""></th>
+        <th class="p-2 text-center input-cell bg-gray-100"><input type="text" oninput="saveHeaders()" class="w-full text-center bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none text-gray-700 font-bold" placeholder=""></th>
+        <th class="p-2 text-center input-cell bg-gray-100"><input type="text" oninput="saveHeaders()" class="w-full text-center bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none text-gray-700 font-bold" placeholder=""></th>
+        <th class="p-2 text-center input-cell bg-gray-100"><input type="text" oninput="saveHeaders()" class="w-full text-center bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none text-gray-700 font-bold" placeholder=""></th>
+        <th class="p-2 text-center input-cell bg-gray-100"><input type="text" oninput="saveHeaders()" class="w-full text-center bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none text-gray-700 font-bold" placeholder=""></th>
         <th class="p-3 w-28 text-center bg-blue-50/80">สถานะ</th>
     </tr>`;
 }
@@ -1199,9 +1251,9 @@ if(students.length===0){
             `;
             tbody.innerHTML+=`
             <tr class="border-b border-gray-100 hover:bg-green-50/50">
-                <td class="p-2 text-center text-gray-500">${student.no}</td>
-                <td class="p-2 font-mono student-id text-xs">${student.id}</td>
-                <td class="p-2 font-medium student-name text-xs md:text-sm whitespace-nowrap">${student.name}</td>
+                <td class="p-2 text-center text-gray-500 sticky-col-1">${student.no}</td>
+                <td class="p-2 font-mono student-id text-xs sticky-col-2">${student.id}</td>
+                <td class="p-2 font-medium student-name text-xs md:text-sm whitespace-nowrap sticky-col-3">${student.name}</td>
                 <td class="p-2 text-center text-gray-500 text-xs">${student.level}</td>
                 <td class="p-2 text-center text-gray-500 text-xs">${student.room}</td>
                 <td class="p-2">${makeSelect(student.status)}</td>
@@ -1226,9 +1278,9 @@ if(students.length===0){
 
             tbody.innerHTML+=`
             <tr class="border-b border-gray-100 hover:bg-blue-50/50">
-                <td class="p-2 text-center text-gray-500">${student.no}</td>
-                <td class="p-2 font-mono student-id text-xs">${student.id}</td>
-                <td class="p-2 font-medium student-name text-xs md:text-sm whitespace-nowrap">${student.name}</td>
+                <td class="p-2 text-center text-gray-500 sticky-col-1">${student.no}</td>
+                <td class="p-2 font-mono student-id text-xs sticky-col-2">${student.id}</td>
+                <td class="p-2 font-medium student-name text-xs md:text-sm whitespace-nowrap sticky-col-3">${student.name}</td>
                 <td class="p-2">${makeSelect(student.s1, 'score-1')}</td>
                 <td class="p-2">${makeSelect(student.s2, 'score-2')}</td>
                 <td class="p-2">${makeDisabledSelect(student.s3)}</td>
@@ -1245,16 +1297,18 @@ if(students.length===0){
             </tr>`;
         } else {
             let statSelect=`<select class="w-full border rounded p-1 text-center status-select ${student.status!=='ปกติ'&&student.status?'bg-red-50 text-red-600 font-bold':''}" onchange="updateStyle(this)">
-            <option value="ปกติ" ${student.status==='ปกติ'?'selected':''}>ปกติ</option>
+            <option value="ปกติ" ${student.status==='ปกติ'||!student.status?'selected':''}>ปกติ</option>
             <option value="ซ" class="text-red-500 font-bold" ${student.status==='ซ'?'selected':''}>ติด ซ</option>
-            <option value="มส" class="text-red-500" ${student.status==='มส'?'selected':''}>มส.</option>
-            <option value="มผ" class="text-orange-500" ${student.status==='มผ'?'selected':''}>มผ.</option>
+            <option value="0" class="text-red-500 font-bold" ${student.status==='0'?'selected':''}>0</option>
+            <option value="ร" class="text-orange-500 font-bold" ${student.status==='ร'?'selected':''}>ร</option>
+            <option value="มส." class="text-red-500" ${student.status==='มส.'?'selected':''}>มส.</option>
+            <option value="มผ." class="text-orange-500" ${student.status==='มผ.'?'selected':''}>มผ.</option>
             </select>`;
             tbody.innerHTML+=`
             <tr class="border-b border-gray-100 hover:bg-blue-50/50 ${student.status!=='ปกติ'&&student.status?'bg-red-50/30':''}">
-            <td class="p-2 text-center text-gray-500">${student.no}</td>
-            <td class="p-2 font-mono student-id text-xs">${student.id}</td>
-            <td class="p-2 font-medium student-name text-xs md:text-sm whitespace-nowrap">${student.name}</td>
+            <td class="p-2 text-center text-gray-500 sticky-col-1">${student.no}</td>
+            <td class="p-2 font-mono student-id text-xs sticky-col-2">${student.id}</td>
+            <td class="p-2 font-medium student-name text-xs md:text-sm whitespace-nowrap sticky-col-3">${student.name}</td>
             <td class="p-1"><input type="number" class="w-full border rounded p-1 text-center score-1" value="${student.s1!==undefined?student.s1:''}"></td>
             <td class="p-1"><input type="number" class="w-full border rounded p-1 text-center score-2" value="${student.s2!==undefined?student.s2:''}"></td>
             <td class="p-1"><input type="number" class="w-full border rounded p-1 text-center score-3" value="${student.s3!==undefined?student.s3:''}"></td>

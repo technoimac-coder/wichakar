@@ -146,6 +146,29 @@ SQL
     // ignore
 }
 
+// ตรวจสอบและสร้างตาราง score_submissions
+try {
+    $pdo->exec("CREATE TABLE IF NOT EXISTS `score_submissions` (
+      `id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      `term` varchar(10) NOT NULL,
+      `year` varchar(10) NOT NULL,
+      `period` varchar(20) NOT NULL,
+      `subject_code` varchar(20) NOT NULL,
+      `subject_name` varchar(150) NOT NULL,
+      `class_level` varchar(10) NOT NULL,
+      `room` varchar(10) NOT NULL,
+      `teacher_name` varchar(100) NOT NULL,
+      `status` varchar(20) NOT NULL DEFAULT 'Draft',
+      `submitted_at` timestamp NULL DEFAULT NULL,
+      `approved_at` timestamp NULL DEFAULT NULL,
+      `reject_reason` varchar(255) DEFAULT NULL,
+      `snapshot_grades` longtext DEFAULT NULL,
+      UNIQUE KEY `idx_submission` (`term`, `year`, `period`, `subject_code`, `room`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+} catch (Exception $e) {
+    // ignore
+}
+
 
 $action = $_GET["action"] ?? "";
 $inputJSON = file_get_contents("php://input");
@@ -392,7 +415,22 @@ switch ($action) {
                 $st["status"] = $g["status"] ?: "ปกติ";
             }
         }
-        echo json_encode($students, JSON_UNESCAPED_UNICODE);
+
+        // ดึงสถานะการส่งสำเนาคะแนน (Submission Status)
+        $subStmt = $pdo->prepare("SELECT status, submitted_at, approved_at, reject_reason FROM score_submissions WHERE term = ? AND year = ? AND period = ? AND subject_code = ? AND room = ?");
+        $subStmt->execute([$term, $year, $period, $code, $room]);
+        $subRow = $subStmt->fetch();
+        $submission = $subRow ? $subRow : [
+            "status" => "Draft",
+            "submitted_at" => null,
+            "approved_at" => null,
+            "reject_reason" => null
+        ];
+
+        echo json_encode([
+            "students" => $students,
+            "submission" => $submission
+        ], JSON_UNESCAPED_UNICODE);
         break;
 
     // 7. บันทึกคะแนนลงตาราง grades
@@ -407,6 +445,15 @@ switch ($action) {
         $room = $input["room"];
         $teacher = $input["teacher"] ?? "";
         $students = $input["students"] ?? [];
+
+        // ตรวจสอบว่าวิชานี้ ห้องนี้ ในเทอมและช่วงเวลานี้ ถูกล็อกหรือยัง
+        $checkSub = $pdo->prepare("SELECT status FROM score_submissions WHERE term = ? AND year = ? AND period = ? AND subject_code = ? AND room = ?");
+        $checkSub->execute([$t, $y, $p, $code, $room]);
+        $subRow = $checkSub->fetch();
+        if ($subRow && in_array($subRow["status"], ["Submitted", "Approved"])) {
+            echo json_encode(["success" => false, "message" => "ไม่สามารถบันทึกคะแนนได้ เนื่องจากวิชานี้อยู่ในสถานะล็อกแล้ว (" . $subRow["status"] . ")"], JSON_UNESCAPED_UNICODE);
+            break;
+        }
 
         // ลบข้อมูลเก่าของวิชานี้ ห้องนี้ ในเทอมและช่วงเวลานี้
         $del = $pdo->prepare("DELETE FROM grades WHERE term = ? AND year = ? AND period = ? AND subject_code = ? AND room = ?");
@@ -533,7 +580,7 @@ switch ($action) {
         list($t, $y) = explode("/", $ty);
 
         $sql = "SELECT teacher_name as teacher, subject_code as subjectCode, subject_name as subjectName, class_level as level, room, student_id as studentId, student_name as studentName, status 
-                FROM grades WHERE term = ? AND year = ? AND period = ? AND status IN ('ซ', 'มส', 'มผ')";
+                FROM grades WHERE term = ? AND year = ? AND period = ? AND status IN ('ซ', '0', 'ร', 'มส.', 'มผ.')";
         $params = [$t, $y, $p];
 
         if ($tFilter !== "ALL" && !empty($tFilter)) {
@@ -679,6 +726,128 @@ switch ($action) {
             $ins->execute([$row[0] ?? null, $row[1], $row[2], $row[3], $row[4]]);
         }
         echo json_encode(["success" => true, "message" => "อัปโหลดรายชื่อนักเรียนเรียบร้อยแล้ว (" . count($data) . " รายการ)"], JSON_UNESCAPED_UNICODE);
+        break;
+
+    // 17. ส่งสำเนาคะแนน (บันทึก Snapshot และเปลี่ยนสถานะล็อกรายวิชา)
+    case "submitScoreCopy":
+        $t = $input["term"];
+        $y = $input["year"];
+        $p = $input["period"];
+        $code = $input["subjectCode"];
+        $name = $input["subjectName"];
+        $lvl = $input["classLevel"];
+        $room = $input["room"];
+        $teacher = $input["teacher"] ?? "";
+        $students = $input["students"] ?? [];
+        $headers = $input["headers"] ?? []; // ป้ายกำกับหัวข้อคะแนน เช่น s1..s10
+
+        // บันทึกคะแนนปัจจุบันลงฐานข้อมูล grades ก่อน
+        $del = $pdo->prepare("DELETE FROM grades WHERE term = ? AND year = ? AND period = ? AND subject_code = ? AND room = ?");
+        $del->execute([$t, $y, $p, $code, $room]);
+
+        $ins = $pdo->prepare("INSERT INTO grades (term, year, period, subject_code, subject_name, class_level, room, student_id, student_name, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, status, teacher_name) 
+                              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+
+        foreach ($students as $st) {
+            $ins->execute([
+                $t, $y, $p, $code, $name, $lvl, $room,
+                $st["id"], $st["name"],
+                $st["s1"] ?? "", $st["s2"] ?? "", $st["s3"] ?? "", $st["s4"] ?? "", $st["s5"] ?? "",
+                $st["s6"] ?? "", $st["s7"] ?? "", $st["s8"] ?? "", $st["s9"] ?? "", $st["s10"] ?? "",
+                $st["status"] ?? "ปกติ", $teacher
+            ]);
+        }
+
+        // บันทึก/อัปเดตประวัติการส่งสำเนา
+        $snapshot = json_encode([
+            "headers" => $headers,
+            "students" => $students
+        ], JSON_UNESCAPED_UNICODE);
+
+        $stmt = $pdo->prepare("INSERT INTO score_submissions (term, year, period, subject_code, subject_name, class_level, room, teacher_name, status, submitted_at, snapshot_grades)
+                               VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Submitted', CURRENT_TIMESTAMP, ?)
+                               ON DUPLICATE KEY UPDATE status = 'Submitted', submitted_at = CURRENT_TIMESTAMP, teacher_name = ?, snapshot_grades = ?, reject_reason = NULL");
+        $stmt->execute([$t, $y, $p, $code, $name, $lvl, $room, $teacher, $snapshot, $teacher, $snapshot]);
+
+        echo json_encode(["success" => true, "message" => "ส่งสำเนาคะแนนและล็อกข้อมูลรายวิชาเรียบร้อยแล้ว"], JSON_UNESCAPED_UNICODE);
+        break;
+
+    // 18. แอดมินดึงรายการส่งสำเนาคะแนนทั้งหมด
+    case "adminGetSubmissions":
+        $t = $input["term"] ?? "2";
+        $y = $input["year"] ?? "2567";
+        $p = $input["period"] ?? "ก่อนกลางภาค";
+
+        // ดึงภาระงานสอนทั้งหมด
+        $loadStmt = $pdo->prepare("SELECT teacher_name as teacher, subject_code as code, subject_name as name, class_level as level, room FROM teaching_load WHERE term = ? AND year = ? ORDER BY teacher_name ASC, subject_code ASC, CAST(room AS UNSIGNED) ASC");
+        $loadStmt->execute([$t, $y]);
+        $loads = $loadStmt->fetchAll();
+
+        // ดึงสถานะการส่งทั้งหมด
+        $subStmt = $pdo->prepare("SELECT subject_code, room, status, submitted_at, approved_at, reject_reason, snapshot_grades FROM score_submissions WHERE term = ? AND year = ? AND period = ?");
+        $subStmt->execute([$t, $y, $p]);
+        $subRows = $subStmt->fetchAll();
+
+        $subMap = [];
+        foreach ($subRows as $sub) {
+            $subMap[$sub["subject_code"] . "_" . $sub["room"]] = $sub;
+        }
+
+        $result = [];
+        foreach ($loads as $ld) {
+            $key = $ld["code"] . "_" . $ld["room"];
+            $status = "Draft";
+            $submitted_at = null;
+            $approved_at = null;
+            $reject_reason = null;
+            $snapshot_grades = null;
+
+            if (isset($subMap[$key])) {
+                $status = $subMap[$key]["status"];
+                $submitted_at = $subMap[$key]["submitted_at"];
+                $approved_at = $subMap[$key]["approved_at"];
+                $reject_reason = $subMap[$key]["reject_reason"];
+                $snapshot_grades = $subMap[$key]["snapshot_grades"];
+            }
+
+            $result[] = [
+                "teacher" => $ld["teacher"],
+                "subjectCode" => $ld["code"],
+                "subjectName" => $ld["name"],
+                "classLevel" => $ld["level"],
+                "room" => $ld["room"],
+                "status" => $status,
+                "submittedAt" => $submitted_at,
+                "approvedAt" => $approved_at,
+                "rejectReason" => $reject_reason,
+                "snapshot" => $snapshot_grades ? json_decode($snapshot_grades, true) : null
+            ];
+        }
+
+        echo json_encode(["success" => true, "submissions" => $result], JSON_UNESCAPED_UNICODE);
+        break;
+
+    // 19. อัปเดตสถานะสำเนาคะแนน (อนุมัติ / ตีกลับแก้ไข)
+    case "adminUpdateSubmission":
+        $t = $input["term"];
+        $y = $input["year"];
+        $p = $input["period"];
+        $code = $input["subjectCode"];
+        $room = $input["room"];
+        $status = $input["status"]; // Approved หรือ Rejected
+        $reason = $input["rejectReason"] ?? "";
+
+        if ($status === "Approved") {
+            $stmt = $pdo->prepare("UPDATE score_submissions SET status = 'Approved', approved_at = CURRENT_TIMESTAMP WHERE term = ? AND year = ? AND period = ? AND subject_code = ? AND room = ?");
+            $stmt->execute([$t, $y, $p, $code, $room]);
+            echo json_encode(["success" => true, "message" => "อนุมัติสำเนาคะแนนเรียบร้อยแล้ว"], JSON_UNESCAPED_UNICODE);
+        } else if ($status === "Rejected") {
+            $stmt = $pdo->prepare("UPDATE score_submissions SET status = 'Rejected', reject_reason = ? WHERE term = ? AND year = ? AND period = ? AND subject_code = ? AND room = ?");
+            $stmt->execute([$reason, $t, $y, $p, $code, $room]);
+            echo json_encode(["success" => true, "message" => "ตีกลับสำเนาคะแนนให้ครูแก้ไขเรียบร้อยแล้ว"], JSON_UNESCAPED_UNICODE);
+        } else {
+            echo json_encode(["success" => false, "message" => "สถานะไม่ถูกต้อง"], JSON_UNESCAPED_UNICODE);
+        }
         break;
 
     default:
