@@ -68,7 +68,7 @@ window.google = {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ระบบผลการเรียน โรงเรียนมกุฎเมืองราชวิทยาลัย</title>
-<script src="https://cdn.tailwindcss.com"></script>
+<script id="tailwind-cdn-style" src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -925,6 +925,17 @@ window.onerror = function(message, source, lineno, colno, error) {
     console.error("Global JS Error:", message, source, lineno, colno, error);
     return false;
 };
+window.addEventListener('DOMContentLoaded', () => {
+    // Check if Tailwind CSS is loaded (Tailwind v3 injection check)
+    setTimeout(() => {
+        if (typeof tailwind === 'undefined' && !document.getElementById('tailwind-cdn-style')) {
+            const warn = document.createElement('div');
+            warn.style.cssText = 'position:fixed;top:0;left:0;width:100%;background-color:#fff3cd;color:#856404;padding:15px;text-align:center;z-index:99999;font-family:sans-serif;font-weight:bold;border-bottom:2px solid #ffeeba;box-shadow:0 2px 10px rgba(0,0,0,0.1);';
+            warn.innerHTML = '⚠️ ตรวจพบว่าเบราว์เซอร์โหลดไฟล์ตกแต่งหน้าเว็บ (Tailwind CSS) ล้มเหลว กรุณากดรีเฟรชหน้าจอแบบล้างแคช (Ctrl + F5) หรือตรวจสอบการเชื่อมต่ออินเทอร์เน็ต';
+            document.body.appendChild(warn);
+        }
+    }, 1000);
+});
 let currentTeacherId="",currentTeacherName="",currentRole="";
 let currentTerm="",currentYear="",currentSystemStatus="OPEN", currentPeriod="ก่อนกลางภาค";
 let globalTeacherNames = []; 
