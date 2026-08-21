@@ -1642,7 +1642,7 @@ function renderMatrixTable(res){
     const periodDisplay=document.getElementById('reportPeriodSelect').value;
     const cleanLevel = levelDisplay.replace(/[ม\\.]/g, '');
 
-    let finalHtml = `<div id="printArea" style="font-family: 'Sarabun', sans-serif; color: #000; background: #fff; width: 100%; margin: 0; box-sizing: border-box;">`;
+    let finalHtml = `<div id="matrixPrintArea" style="font-family: 'Sarabun', sans-serif; color: #000; background: #fff; width: 100%; margin: 0; box-sizing: border-box;">`;
 
     res.reports.forEach((report, rIndex) => {
         const {students, subjects, grades, activities, advisorName, room} = report;
@@ -1786,7 +1786,7 @@ function renderMatrixTable(res){
 }
 
 function exportPDF(){
-const element=document.getElementById('printArea');
+const element=document.getElementById('matrixPrintArea');
 const term=document.getElementById('termSelect').value.replace('/','-');
 const level=document.getElementById('levelSelect').value.replace(/\\./g, '');
 const roomStr=document.getElementById('roomSelect').value === 'all' ? 'รวม' : document.getElementById('roomSelect').value;
