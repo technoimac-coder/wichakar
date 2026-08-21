@@ -1,897 +1,4 @@
-<!DOCTYPE html>
-<html lang="th">
-<head>
 
-<script>
-/**
- * HostAtom API Adapter: เชื่อมต่อ API PHP + MySQL แทน google.script.run
- */
-window.google = {
-  script: {
-    run: {
-      withSuccessHandler: function(successFn) {
-        var obj = Object.create(this);
-        obj._success = successFn;
-        return obj;
-      },
-      withFailureHandler: function(failFn) {
-        var obj = Object.create(this);
-        obj._fail = failFn;
-        return obj;
-      },
-      _call: function(action, data) {
-        var self = this;
-        fetch("api.php?action=" + action, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(data || {})
-        })
-        .then(function(res) { return res.json(); })
-        .then(function(json) {
-          if (self._success) self._success(json);
-        })
-        .catch(function(err) {
-          if (self._fail) self._fail(err);
-          else {
-            console.error("API Error (" + action + "):", err);
-            alert("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์: " + err.message);
-          }
-        });
-      },
-      getSystemSettings: function() { this._call("getSystemSettings"); },
-      setSystemStatus: function(status) { this._call("setSystemStatus", { status: status }); },
-      updateSystemTermYear: function(term, year, period) { this._call("updateSystemTermYear", { term: term, year: year, period: period }); },
-      checkLogin: function(username, password) { this._call("checkLogin", { username: username, password: password }); },
-      changePassword: function(username, oldPassword, newPassword) { this._call("changePassword", { username: username, oldPassword: oldPassword, newPassword: newPassword }); },
-      getTeacherSubjects: function(teacherName, teacherId) { this._call("getTeacherSubjects", { teacherName: teacherName, teacherId: teacherId }); },
-      getStudentsByRoom: function(classLevel, room, term, year, subjectCode, period) { this._call("getStudentsByRoom", { classLevel: classLevel, room: room, term: term, year: year, subjectCode: subjectCode, period: period }); },
-      saveGradesToSheet: function(data) { this._call("saveGradesToSheet", data); },
-      getReportFilters: function() { this._call("getReportFilters"); },
-      getMatrixReport: function(period, term, level, room) { this._call("getMatrixReport", { period: period, term: term, level: level, room: room }); },
-      getTeacherRemedialReport: function(period, termYear, teacherFilter) { this._call("getTeacherRemedialReport", { period: period, termYear: termYear, teacherFilter: teacherFilter }); },
-      getTeacherNames: function() { this._call("getTeacherNames"); },
-      getMissingGradesReport: function(period, term, year) { this._call("getMissingGradesReport", { period: period, term: term, year: year }); },
-      getExistingTeachingLoad: function(term, year) { this._call("getExistingTeachingLoad", { term: term, year: year }); },
-      saveDatabaseWeb: function(type, data, overwrite) { this._call("saveDatabaseWeb", { type: type, data: data, overwrite: overwrite }); },
-      uploadClubStudents: function(data, overwrite) { this._call("uploadClubStudents", { data: data, overwrite: overwrite }); },
-      uploadStudents: function(data, overwrite) { this._call("uploadStudents", { data: data, overwrite: overwrite }); },
-      getTeacherAccounts: function() { this._call("getTeacherAccounts"); },
-      resetTeacherPassword: function(username) { this._call("resetTeacherPassword", { username: username }); },
-      submitScoreCopy: function(data) { this._call("submitScoreCopy", data); },
-      adminGetSubmissions: function(term, year, period) { this._call("adminGetSubmissions", { term: term, year: year, period: period }); },
-      adminUpdateSubmission: function(term, year, period, subjectCode, room, status, rejectReason) { this._call("adminUpdateSubmission", { term: term, year: year, period: period, subjectCode: subjectCode, room: room, status: status, rejectReason: rejectReason }); }
-    }
-  }
-};
-</script>
-
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ระบบผลการเรียน โรงเรียนมกุฎเมืองราชวิทยาลัย</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-<style>
-body{font-family:'Sarabun',sans-serif;background-color:#f3f4f6;}
-.table-scrollbar::-webkit-scrollbar{height:8px;width:8px;}
-.table-scrollbar::-webkit-scrollbar-track{background:#f1f1f1;border-radius:4px;}
-.table-scrollbar::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:4px;}
-.table-scrollbar::-webkit-scrollbar-thumb:hover{background:#94a3b8;}
-.fade-in{animation:fadeIn 0.3s ease-in-out;}
-@keyframes fadeIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
-.status-danger{color:#ef4444;font-weight:bold;}
-.status-warning{color:#f97316;font-weight:bold;}
-.input-cell{min-width:60px;}
-
-.sticky-col-1 {
-    position: sticky;
-    left: 0;
-    z-index: 10;
-}
-.sticky-col-2 {
-    position: sticky;
-    left: 48px;
-    z-index: 10;
-}
-.sticky-col-3 {
-    position: sticky;
-    left: 128px;
-    z-index: 10;
-    box-shadow: 2px 0 5px -2px rgba(0,0,0,0.15);
-}
-/* Default backgrounds for body cells */
-tbody td.sticky-col-1, tbody td.sticky-col-2, tbody td.sticky-col-3 {
-    background-color: #fff;
-}
-/* Hover backgrounds */
-tr:hover td.sticky-col-1, tr:hover td.sticky-col-2, tr:hover td.sticky-col-3 {
-    background-color: #f1f5f9 !important;
-}
-/* Header backgrounds */
-thead th.sticky-col-1, thead th.sticky-col-2, thead th.sticky-col-3 {
-    z-index: 30;
-    background-color: #f8fafc;
-}
-/* Specific color schemes for CLUB / ACT99 */
-.bg-green-50 th.sticky-col-1, .bg-green-50 th.sticky-col-2, .bg-green-50 th.sticky-col-3 {
-    background-color: #f0fdf4 !important;
-}
-.bg-blue-100\/50 th.sticky-col-1, .bg-blue-100\/50 th.sticky-col-2, .bg-blue-100\/50 th.sticky-col-3 {
-    background-color: #eff6ff !important;
-}
-/* Special row backgrounds like bg-red-50/30 */
-tr.bg-red-50\/30 td.sticky-col-1, tr.bg-red-50\/30 td.sticky-col-2, tr.bg-red-50\/30 td.sticky-col-3 {
-    background-color: #fef2f2 !important;
-}
-tr.bg-red-50\/30:hover td.sticky-col-1, tr.bg-red-50\/30:hover td.sticky-col-2, tr.bg-red-50\/30:hover td.sticky-col-3 {
-    background-color: #fee2e2 !important;
-}
-/* Special row backgrounds for CLUB green rows on hover */
-tr.hover\:bg-green-50\/50:hover td.sticky-col-1, tr.hover\:bg-green-50\/50:hover td.sticky-col-2, tr.hover\:bg-green-50\/50:hover td.sticky-col-3 {
-    background-color: #f0fdf4 !important;
-}
-/* Special row backgrounds for normal subject blue hover rows */
-tr.hover\:bg-blue-50\/50:hover td.sticky-col-1, tr.hover\:bg-blue-50\/50:hover td.sticky-col-2, tr.hover\:bg-blue-50\/50:hover td.sticky-col-3 {
-    background-color: #eff6ff !important;
-}
-</style>
-</head>
-<body class="text-gray-800 antialiased">
-
-<datalist id="teacherDatalist"></datalist>
-
-
-<!-- Modal สรุปนักเรียนติด ซ สำหรับครูผู้สอน -->
-<div id="myRemedialModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-[100] hidden flex items-center justify-center p-4 transition-opacity">
-    <div class="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] shadow-2xl flex flex-col fade-in overflow-hidden">
-        <div class="bg-gradient-to-r from-red-600 to-red-700 text-white px-6 py-4 flex justify-between items-center">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-xl">
-                    <i class="fa-solid fa-user-xmark"></i>
-                </div>
-                <div>
-                    <h3 class="text-lg font-bold">สรุปรายชื่อนักเรียนที่ติด "ซ" ในวิชาที่สอน</h3>
-                    <p class="text-xs text-red-100" id="myRemedialTeacherName">ครูผู้สอน: -</p>
-                </div>
-            </div>
-            <button onclick="closeMyRemedialModal()" class="text-white hover:bg-white/20 w-8 h-8 rounded-full flex items-center justify-center transition">
-                <i class="fa-solid fa-xmark text-lg"></i>
-            </button>
-        </div>
-        
-        <div class="p-6 overflow-y-auto flex-grow table-scrollbar">
-            <div id="myRemedialLoading" class="hidden text-center py-8 text-gray-500">
-                <div class="loader mb-3 mx-auto border-red-500"></div>
-                <p>กำลังค้นหาข้อมูลนักเรียนที่ติด ซ...</p>
-            </div>
-            
-            <div id="myRemedialContent">
-                <div id="myRemedialStats" class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6"></div>
-                
-                <div class="border rounded-xl overflow-hidden shadow-sm">
-                    <table class="w-full text-left border-collapse text-sm">
-                        <thead class="bg-gray-100 text-gray-700">
-                            <tr>
-                                <th class="p-3 border-b text-center w-12">ลำดับ</th>
-                                <th class="p-3 border-b w-24">รหัสนักเรียน</th>
-                                <th class="p-3 border-b">ชื่อ - สกุล</th>
-                                <th class="p-3 border-b text-center w-20">ชั้น/ห้อง</th>
-                                <th class="p-3 border-b">รหัส/ชื่อรายวิชา</th>
-                                <th class="p-3 border-b text-center w-24">สถานะ</th>
-                            </tr>
-                        </thead>
-                        <tbody id="myRemedialBody">
-                            <tr><td colspan="6" class="p-6 text-center text-gray-500">ไม่มีข้อมูล</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <div class="p-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
-            <span class="text-xs text-gray-500" id="myRemedialSummaryText">พบนักเรียนติด ซ ทั้งหมด 0 คน</span>
-            <div class="flex gap-2">
-                <button onclick="printMyRemedial()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition text-sm flex items-center gap-1.5 shadow-sm">
-                    <i class="fa-solid fa-print"></i> พิมพ์ใบรายชื่อ
-                </button>
-                <button onclick="closeMyRemedialModal()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium transition text-sm">
-                    ปิดหน้าต่าง
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modal พิมพ์สำเนาคะแนน -->
-<div id="printPreviewModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-[100] hidden flex items-center justify-center p-4 transition-opacity">
-    <div class="bg-white rounded-2xl w-full max-w-5xl max-h-[95vh] shadow-2xl flex flex-col fade-in overflow-hidden">
-        <div class="bg-gradient-to-r from-blue-700 to-indigo-800 text-white px-6 py-4 flex justify-between items-center">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-xl">
-                    <i class="fa-solid fa-print"></i>
-                </div>
-                <div>
-                    <h3 class="text-lg font-bold">พิมพ์สำเนาคะแนนเก็บนักเรียน</h3>
-                    <p class="text-xs text-blue-100">ตัวอย่างเอกสารก่อนพิมพ์ (ปพ.5)</p>
-                </div>
-            </div>
-            <button onclick="closePrintPreviewModal()" class="text-white hover:bg-white/20 w-8 h-8 rounded-full flex items-center justify-center transition">
-                <i class="fa-solid fa-xmark text-lg"></i>
-            </button>
-        </div>
-        
-        <div class="p-6 overflow-y-auto flex-grow table-scrollbar bg-gray-100">
-            <div id="printArea" class="bg-white p-8 shadow-md mx-auto max-w-[210mm] min-h-[297mm] text-gray-800" style="font-family: 'Sarabun', sans-serif;">
-                <!-- รายละเอียดคะแนนสำหรับการพิมพ์จะแสดงตรงนี้ -->
-            </div>
-        </div>
-
-        <div class="p-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3">
-            <button onclick="downloadScoreCopyPDF()" class="px-5 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-bold transition text-sm flex items-center gap-2 shadow-sm">
-                <i class="fa-solid fa-file-pdf"></i> ดาวน์โหลด PDF
-            </button>
-            <button onclick="triggerBrowserPrint()" class="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold transition text-sm flex items-center gap-2 shadow-sm">
-                <i class="fa-solid fa-print"></i> พิมพ์เอกสาร (Print)
-            </button>
-            <button onclick="closePrintPreviewModal()" class="px-5 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium transition text-sm">
-                ปิดหน้าต่าง
-            </button>
-        </div>
-    </div>
-</div>
-
-
-<!-- Modal บังคับเปลี่ยนรหัสผ่านครั้งแรก -->
-<div id="forceChangePasswordModal" class="fixed inset-0 bg-gray-900 bg-opacity-70 z-[200] hidden items-center justify-center p-4">
-    <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6 fade-in text-left">
-        <div class="text-center mb-5">
-            <div class="w-14 h-14 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl shadow-sm">
-                <i class="fa-solid fa-key"></i>
-            </div>
-            <h3 class="text-xl font-bold text-gray-800">เปลี่ยนรหัสผ่านเพื่อความปลอดภัย</h3>
-            <p class="text-xs text-gray-500 mt-1">คุณกำลังใช้รหัสผ่านเริ่มต้น กรุณาตั้งรหัสผ่านใหม่เพื่อเข้าใช้งานระบบ</p>
-        </div>
-
-        <div class="space-y-4">
-            <div>
-                <label class="block text-xs font-bold text-gray-700 mb-1">รหัสผ่านใหม่ (อย่างน้อย 6 ตัวอักษร)</label>
-                <div class="relative">
-                    <input type="password" id="newTeacherPassword" class="w-full border border-gray-300 rounded-lg p-2.5 pr-10 outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="••••••••">
-                    <button type="button" onclick="toggleInputVisibility('newTeacherPassword', 'newPassEye')" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-600 p-1">
-                        <i id="newPassEye" class="fa-solid fa-eye text-xs"></i>
-                    </button>
-                </div>
-            </div>
-            <div>
-                <label class="block text-xs font-bold text-gray-700 mb-1">ยืนยันรหัสผ่านใหม่อีกครั้ง</label>
-                <div class="relative">
-                    <input type="password" id="confirmTeacherPassword" class="w-full border border-gray-300 rounded-lg p-2.5 pr-10 outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="••••••••">
-                    <button type="button" onclick="toggleInputVisibility('confirmTeacherPassword', 'confPassEye')" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-600 p-1">
-                        <i id="confPassEye" class="fa-solid fa-eye text-xs"></i>
-                    </button>
-                </div>
-            </div>
-            
-            <div id="changePasswordError" class="hidden bg-red-50 text-red-600 text-xs p-3 rounded-lg border border-red-200">
-                <i class="fa-solid fa-circle-exclamation mr-1"></i> <span id="changePasswordErrorText"></span>
-            </div>
-
-            <button id="btnSaveNewPassword" onclick="submitForceChangePassword()" class="w-full bg-blue-600 text-white font-bold py-2.5 px-4 rounded-lg hover:bg-blue-700 transition shadow-md text-sm">
-                <i class="fa-solid fa-shield-check mr-1"></i> บันทึกรหัสผ่านใหม่และเข้าสู่ระบบ
-            </button>
-        </div>
-    </div>
-</div>
-
-<div id="logoutModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-[100] hidden flex items-center justify-center transition-opacity">
-    <div class="bg-white rounded-2xl p-6 w-80 shadow-2xl text-center fade-in">
-        <div class="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
-            <i class="fa-solid fa-right-from-bracket"></i>
-        </div>
-        <h3 class="text-xl font-bold text-gray-800 mb-2">ยืนยันการออกจากระบบ</h3>
-        <p class="text-sm text-gray-500 mb-6">คุณต้องการออกจากระบบและกลับไปหน้าล็อกอินใช่หรือไม่?</p>
-        <div class="flex gap-3 justify-center">
-            <button onclick="closeLogoutModal()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium transition w-full">ยกเลิก</button>
-            <button onclick="confirmLogout()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition w-full">ออกจากระบบ</button>
-        </div>
-    </div>
-</div>
-
-<div id="loginSection" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 to-blue-600 p-4 relative overflow-hidden">
-<div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md z-10 fade-in">
-<div class="text-center mb-8">
-<div class="w-24 h-24 bg-blue-50 border-2 border-blue-200 rounded-full flex items-center justify-center mx-auto mb-4 shadow-md overflow-hidden p-1">
-<img src="https://lh3.googleusercontent.com/d/12IL8pMebvGZCeRage4JHcw7woeS4DnXU" alt="ตราโรงเรียนมกุฎเมืองราชวิทยาลัย" class="w-full h-full object-cover rounded-full">
-</div>
-<h2 class="text-2xl font-bold text-gray-800">เข้าสู่ระบบ</h2>
-<p class="text-sm font-medium text-gray-600 mt-1">ส่งสำเนาคะแนนเก็บนักเรียน</p>
-<p class="text-blue-600 font-semibold text-xs mt-0.5">โรงเรียนมกุฎเมืองราชวิทยาลัย</p>
-</div>
-<div class="space-y-5">
-<div>
-<label class="block text-sm font-semibold text-gray-700 mb-1">รหัสประจำตัว (Username)</label>
-<input type="text" id="teacherId" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="เช่น 1509900...">
-</div>
-<div>
-<label class="block text-sm font-semibold text-gray-700 mb-1">รหัสผ่าน (Password)</label>
-<div class="relative">
-    <input type="password" id="teacherPin" class="block w-full px-3 py-2.5 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm" placeholder="••••••••">
-    <button type="button" onclick="togglePasswordVisibility()" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-600 transition p-1">
-        <i id="passwordEyeIcon" class="fa-solid fa-eye text-sm"></i>
-    </button>
-</div>
-<p class="text-xs text-red-500 font-semibold mt-1.5 flex items-center gap-1.5">
-    <i class="fa-solid fa-circle-info text-[11px]"></i> รหัสเริ่มต้น: Password@123
-</p>
-</div>
-<div id="loginError" class="hidden bg-red-50 text-red-600 text-sm p-3 rounded-lg border border-red-200">
-<i class="fa-solid fa-circle-exclamation mr-1"></i> <span id="loginErrorText">รหัสไม่ถูกต้อง!</span>
-</div>
-<button id="loginBtn" onclick="handleLogin()" class="w-full bg-blue-600 text-white font-bold py-2.5 px-4 rounded-lg hover:bg-blue-700 transition shadow-md">
-เข้าสู่ระบบ <i class="fa-solid fa-arrow-right-to-bracket ml-1"></i>
-</button>
-</div>
-</div>
-</div>
-
-<div id="mainAppSection" class="hidden flex-col min-h-screen">
-<nav class="bg-blue-800 text-white shadow-lg sticky top-0 z-50">
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-<div class="flex items-center justify-between h-16">
-<div class="flex items-center gap-4">
-<div class="flex items-center gap-2">
-<div class="w-9 h-9 bg-white rounded-full flex items-center justify-center overflow-hidden border border-blue-300 p-0.5">
-<img src="https://lh3.googleusercontent.com/d/12IL8pMebvGZCeRage4JHcw7woeS4DnXU" alt="Logo" class="w-full h-full object-cover rounded-full">
-</div>
-<div class="font-bold text-lg hidden sm:block">มกุฎเมืองราชวิทยาลัย</div>
-</div>
-<div class="flex space-x-1 bg-blue-900/50 p-1 rounded-lg">
-<button id="tabBtnGrading" onclick="switchTab('grading')" class="px-4 py-1.5 rounded-md text-sm font-medium bg-white text-blue-800 shadow transition-all">
-<i class="fa-solid fa-pen-to-square mr-1"></i> กรอกคะแนน
-</button>
-<button id="tabBtnReport" onclick="switchTab('report')" class="px-4 py-1.5 rounded-md text-sm font-medium text-blue-100 hover:text-white hover:bg-blue-700 transition-all hidden">
-<i class="fa-solid fa-chart-line mr-1"></i> รายงานวิชาการ
-</button>
-<button id="tabBtnDatabase" onclick="switchTab('database')" class="px-4 py-1.5 rounded-md text-sm font-medium text-blue-100 hover:text-white hover:bg-blue-700 transition-all hidden">
-<i class="fa-solid fa-database mr-1"></i> จัดการฐานข้อมูล
-</button>
-</div>
-</div>
-<div class="flex items-center gap-3">
-
-<button onclick="openMyRemedialModal()" class="bg-red-600/90 hover:bg-red-600 text-white text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-md transition font-semibold" title="ดูสรุปนักเรียนติด ซ ในวิชาที่สอน">
-    <i class="fa-solid fa-user-xmark"></i>
-    <span class="hidden md:inline">นักเรียนติด ซ ของฉัน</span>
-</button>
-
-<span id="navTermInfo" class="bg-blue-700 px-3 py-1 rounded text-xs font-semibold">ภาคเรียน -</span>
-<span id="navTeacherName" class="font-medium text-blue-100 text-sm hidden sm:inline"></span>
-<button onclick="handleLogout()" class="w-9 h-9 rounded-full bg-blue-700 hover:bg-red-500 flex items-center justify-center transition-colors shadow-md" title="ออกจากระบบ">
-<i class="fa-solid fa-power-off"></i>
-</button>
-</div>
-</div>
-</div>
-</nav>
-
-<main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
-
-<div id="viewGrading" class="fade-in">
-<div id="systemClosedBanner" class="hidden mb-6 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl flex items-center gap-3 shadow-sm">
-<i class="fa-solid fa-triangle-exclamation text-xl"></i>
-<div>
-<strong class="font-bold">ระบบปิดรับการกรอกคะแนนชั่วคราว!</strong>
-<span class="block sm:inline text-sm">ผู้ดูแลระบบปิดการกรอกคะแนนในขณะนี้ คุณสามารถดูข้อมูลได้แต่จะไม่สามารถบันทึกได้</span>
-</div>
-</div>
-<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-<h3 class="text-lg font-bold text-gray-800 mb-4 pb-2 border-b border-gray-100 flex items-center justify-between">
-<span><i class="fa-solid fa-filter text-blue-500 mr-2"></i> เลือกรายวิชาเพื่อบันทึกคะแนน</span>
-<span id="currentTermDisplay" class="text-xs bg-blue-50 text-blue-600 px-3 py-1 rounded-full font-semibold border border-blue-200">ภาคเรียน: -</span>
-</h3>
-<div class="flex flex-col md:flex-row gap-4 items-center">
-<div class="flex-grow w-full">
-<select id="subjectSelect" class="w-full border border-gray-300 rounded-lg p-2.5 outline-none bg-white shadow-sm focus:border-blue-500" onchange="loadStudents()" disabled>
-<option value="">กำลังโหลดวิชา...</option>
-</select>
-</div>
-<div id="loadIndicator" class="hidden text-blue-600 font-bold flex items-center justify-center gap-2 whitespace-nowrap px-4 py-2 bg-blue-50 rounded-lg border border-blue-100">
-<i class="fa-solid fa-spinner fa-spin"></i> กำลังดึงรายชื่อ...
-</div>
-</div>
-</div>
-<div id="gradingSection" class="hidden bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-<div class="bg-blue-50 px-6 py-4 border-b border-blue-100 flex justify-between items-center">
-<div>
-<h3 id="tableTitle" class="text-lg font-bold text-blue-800">รายชื่อนักเรียน</h3>
-<p id="tableSubtitle" class="text-xs text-blue-600 mt-1">สามารถเลือกกรอกเฉพาะช่องที่ต้องการได้ หรือพิมพ์ชื่อหัวคอลัมน์ได้เอง</p>
-</div>
-<div class="flex items-center gap-3">
-<span id="submissionBadge" class="hidden text-xs px-3 py-1.5 rounded-full font-bold border"></span>
-<div class="text-sm bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-medium whitespace-nowrap">
-<i class="fa-solid fa-users mr-1"></i> <span id="studentCount">0</span> คน
-</div>
-</div>
-</div>
-<div class="overflow-x-auto table-scrollbar" style="max-height: 60vh;">
-<table id="mainTable" class="w-full text-left border-collapse min-w-[1200px]">
-<thead id="tableHeader" class="sticky top-0 bg-gray-50 z-10 shadow-sm"></thead>
-<tbody id="studentTableBody" class="text-sm"></tbody>
-</table>
-</div>
-<div class="p-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3 items-center">
-<span id="rejectReasonText" class="hidden text-xs text-red-600 font-bold mr-auto"></span>
-<span id="saveStatus" class="text-gray-500 text-sm hidden flex items-center"><div class="loader mr-2"></div> กำลังบันทึก...</span>
-<button id="printBtn" onclick="printScoreCopy()" class="hidden bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-lg transition flex items-center gap-2 shadow-md">
-<i class="fa-solid fa-print"></i> พิมพ์สำเนาคะแนน
-</button>
-<button id="saveBtn" onclick="saveData()" class="bg-green-600 text-white font-bold py-2.5 px-8 rounded-lg hover:bg-green-700 transition flex items-center gap-2 shadow-md">
-<i class="fa-solid fa-cloud-arrow-up"></i> บันทึกคะแนน
-</button>
-<button id="submitCopyBtn" onclick="openSubmitCopyModal()" class="bg-indigo-600 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-indigo-700 transition flex items-center gap-2 shadow-md">
-<i class="fa-solid fa-paper-plane"></i> ส่งสำเนาคะแนน
-</button>
-</div>
-</div>
-</div>
-
-
-<div id="viewReport" class="hidden fade-in">
-<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-<h3 class="text-lg font-bold text-gray-800 mb-4 pb-2 border-b border-gray-100 flex items-center justify-between">
-<span><i class="fa-solid fa-gear text-blue-500 mr-2"></i> ตั้งค่าระบบสำหรับผู้ดูแล</span>
-</h3>
-<div class="flex flex-col gap-4">
-    <div class="flex items-center justify-between bg-gray-50 p-4 rounded-xl border border-gray-200">
-        <div>
-        <h4 class="font-bold text-gray-700">สถานะการกรอกคะแนนของครูผู้สอน</h4>
-        <p class="text-xs text-gray-500">หากปิดระบบ ครูจะไม่สามารถบันทึกหรือแก้ไขคะแนนได้</p>
-        </div>
-        <div class="flex items-center gap-3">
-        <span id="statusText" class="font-bold text-green-600">เปิดระบบ (OPEN)</span>
-        <button id="toggleSystemBtn" onclick="toggleSystemStatus()" class="bg-red-600 text-white text-xs px-4 py-2 rounded-lg hover:bg-red-700 transition shadow-sm">
-        ปิดระบบชั่วคราว
-        </button>
-        </div>
-    </div>
-
-    <div class="flex flex-wrap items-center justify-between bg-blue-50 p-4 rounded-xl border border-blue-200 gap-4">
-        <div>
-        <h4 class="font-bold text-blue-800">ตั้งค่าการประเมินปัจจุบัน (ภาคเรียน / ปีการศึกษา / ช่วงเวลา)</h4>
-        <p class="text-xs text-blue-600">ระบบจะแสดงรายวิชาและบันทึกคะแนนลงในฐานข้อมูลตามที่ตั้งค่าไว้นี้</p>
-        </div>
-        <div class="flex flex-wrap items-center gap-2">
-            <input type="text" id="settingTerm" class="border border-gray-300 rounded-lg p-1.5 w-16 text-center outline-none focus:border-blue-500 font-bold" placeholder="เทอม">
-            <span class="text-gray-500 font-bold">/</span>
-            <input type="text" id="settingYear" class="border border-gray-300 rounded-lg p-1.5 w-24 text-center outline-none focus:border-blue-500 font-bold" placeholder="ปีการศึกษา">
-            <select id="settingPeriod" class="border border-gray-300 rounded-lg p-1.5 text-center outline-none focus:border-blue-500 font-bold text-blue-700">
-                <option value="ก่อนกลางภาค">ก่อนกลางภาค</option>
-                <option value="หลังกลางภาค">หลังกลางภาค</option>
-            </select>
-            <button id="btnSaveTerm" onclick="updateTermYear(event)" class="bg-blue-600 text-white text-xs px-4 py-2 rounded-lg hover:bg-blue-700 transition shadow-sm ml-2">
-                บันทึก
-            </button>
-        </div>
-    </div>
-</div>
-</div>
-
-<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6 border-l-4 border-l-orange-500">
-    <h3 class="text-lg font-bold text-gray-800 mb-4 pb-2 border-b border-gray-100 flex items-center justify-between">
-        <span><i class="fa-solid fa-user-clock text-orange-500 mr-2"></i> ติดตามรายวิชาที่ยังไม่ส่งคะแนน</span>
-    </h3>
-    <div class="flex flex-wrap items-end gap-4 mb-4">
-        <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-1">ภาคเรียน/ปีการศึกษา:</label>
-            <select id="trackTermSelect" class="border border-gray-300 rounded-lg p-2 outline-none min-w-[140px] bg-white"></select>
-        </div>
-        <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-1">ช่วงเวลา:</label>
-            <select id="trackPeriodSelect" class="border border-gray-300 rounded-lg p-2 outline-none min-w-[140px] bg-white">
-                <option value="ก่อนกลางภาค">ก่อนกลางภาค</option>
-                <option value="หลังกลางภาค">หลังกลางภาค</option>
-            </select>
-        </div>
-        <button onclick="loadMissingGrades()" class="bg-orange-500 text-white px-6 py-2 rounded-lg hover:bg-orange-600 transition flex items-center gap-2 shadow-md font-bold">
-            <i class="fa-solid fa-magnifying-glass"></i> ตรวจสอบการส่ง
-        </button>
-    </div>
-    <div id="trackLoading" class="hidden text-center py-6 text-gray-500"><div class="loader mb-3 mx-auto border-orange-500"></div><p>กำลังประมวลผลข้อมูล...</p></div>
-    <div id="trackResult" class="hidden mt-4"></div>
-</div>
-
-
-<!-- การ์ดรายงานสรุปผลการเรียน ซ แยกตามครูผู้สอนและรายวิชา -->
-<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6 border-l-4 border-l-red-500">
-    <div class="flex flex-wrap justify-between items-center mb-4 pb-2 border-b border-gray-100 gap-2">
-        <h3 class="text-lg font-bold text-gray-800 flex items-center">
-            <i class="fa-solid fa-users-rectangle text-red-500 mr-2"></i> รายงานสรุปนักเรียนติด "ซ" แยกตามครูผู้สอนและรายวิชา
-        </h3>
-        <span class="text-xs bg-red-50 text-red-600 px-3 py-1 rounded-full font-bold border border-red-200">
-            ระบบติดตามผลการแก้ ซ / ซ่อมเสริม
-        </span>
-    </div>
-
-    <div class="flex flex-wrap items-end gap-4 mb-6">
-        <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-1">ภาคเรียน/ปีการศึกษา:</label>
-            <select id="remedialTermSelect" class="border border-gray-300 rounded-lg p-2 outline-none min-w-[140px] bg-white text-sm"></select>
-        </div>
-        <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-1">ช่วงเวลา:</label>
-            <select id="remedialPeriodSelect" class="border border-gray-300 rounded-lg p-2 outline-none min-w-[140px] bg-white text-sm">
-                <option value="ก่อนกลางภาค">ก่อนกลางภาค</option>
-                <option value="หลังกลางภาค">หลังกลางภาค</option>
-            </select>
-        </div>
-        <div class="flex-grow min-w-[200px]">
-            <label class="block text-sm font-semibold text-gray-700 mb-1">เลือกครูผู้สอน:</label>
-            <select id="remedialTeacherSelect" class="w-full border border-gray-300 rounded-lg p-2 outline-none bg-white text-sm">
-                <option value="ALL">-- ครูผู้สอนทุกคน (ทั้งหมด) --</option>
-            </select>
-        </div>
-        <button onclick="loadTeacherRemedialReport()" class="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition flex items-center gap-2 shadow-md font-bold text-sm">
-            <i class="fa-solid fa-search"></i> ค้นหารายงาน ซ
-        </button>
-        <div class="flex-grow text-right">
-            <button id="btnRemedialPdf" onclick="exportRemedialPDF()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition hidden inline-flex items-center gap-2 shadow-md text-sm font-bold">
-                <i class="fa-solid fa-file-pdf"></i> ดาวน์โหลด PDF / พิมพ์
-            </button>
-        </div>
-    </div>
-
-    <div id="remedialLoading" class="hidden text-center py-10 text-gray-500">
-        <div class="loader mb-3 mx-auto border-red-500"></div>
-        <p>กำลังค้นหาและประมวลผลข้อมูลนักเรียนติด ซ...</p>
-    </div>
-    
-    <div id="remedialErrorMsg" class="hidden bg-red-50 text-red-600 p-4 rounded-lg text-center font-medium mb-4"></div>
-    
-    <div id="remedialContainer" class="hidden space-y-6"></div>
-</div>
-
-<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-<h3 class="text-lg font-bold text-gray-800 mb-4 pb-2 border-b border-gray-100 flex items-center justify-between">
-<span><i class="fa-solid fa-print text-blue-500 mr-2"></i> รายงานสรุปผลการเรียน (Matrix)</span>
-</h3>
-<div class="flex flex-wrap items-end gap-4 mb-6">
-<div>
-<label class="block text-sm font-semibold text-gray-700 mb-1">ภาคเรียน/ปีการศึกษา:</label>
-<select id="termSelect" class="border border-gray-300 rounded-lg p-2 outline-none min-w-[140px] bg-white"></select>
-</div>
-<div>
-<label class="block text-sm font-semibold text-gray-700 mb-1">ช่วงเวลา:</label>
-<select id="reportPeriodSelect" class="border border-gray-300 rounded-lg p-2 outline-none min-w-[140px] bg-white">
-    <option value="ก่อนกลางภาค">ก่อนกลางภาค</option>
-    <option value="หลังกลางภาค">หลังกลางภาค</option>
-</select>
-</div>
-<div>
-<label class="block text-sm font-semibold text-gray-700 mb-1">ระดับชั้น:</label>
-<select id="levelSelect" class="border border-gray-300 rounded-lg p-2 outline-none min-w-[120px] bg-white" onchange="updateRoomSelect()">
-<option value="">-- เลือกระดับ --</option>
-</select>
-</div>
-<div>
-<label class="block text-sm font-semibold text-gray-700 mb-1">ห้องเรียน:</label>
-<select id="roomSelect" class="border border-gray-300 rounded-lg p-2 outline-none min-w-[140px] bg-white">
-<option value="">-- เลือกห้อง --</option>
-</select>
-</div>
-<button onclick="loadMatrixReport()" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition flex items-center gap-2 shadow-md">
-<i class="fa-solid fa-search"></i> แสดงตาราง
-</button>
-<div class="flex-grow text-right">
-<button id="pdfBtn" onclick="exportPDF()" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition hidden inline-flex items-center gap-2 shadow-md">
-<i class="fa-solid fa-file-pdf"></i> ดาวน์โหลด PDF
-</button>
-</div>
-</div>
-<div id="reportLoading" class="hidden text-center py-10 text-gray-500"><div class="loader mb-3 mx-auto"></div><p>กำลังสร้างรายงาน...</p></div>
-<div id="reportErrorMsg" class="hidden bg-red-50 text-red-600 p-4 rounded-lg text-center font-medium mb-4"></div>
-<div id="reportContainer" class="overflow-x-auto bg-white hidden p-0 flex justify-center"></div>
-</div>
-
-    <!-- การ์ดตรวจรับและอนุมัติสำเนาคะแนน (ฝ่ายวิชาการ/Admin) -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6 border-l-4 border-l-indigo-600">
-        <div class="flex flex-wrap justify-between items-center mb-4 pb-2 border-b border-gray-100 gap-2">
-            <h3 class="text-lg font-bold text-gray-800 flex items-center">
-                <i class="fa-solid fa-stamp text-indigo-600 mr-2"></i> ตรวจรับและอนุมัติสำเนาคะแนน (ฝ่ายวัดผล/วิชาการ)
-            </h3>
-            <span class="text-xs bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full font-bold border border-indigo-200">
-                ระบบจัดการล็อกคะแนนประจำภาคเรียน
-            </span>
-        </div>
-
-        <div class="flex flex-wrap items-end gap-4 mb-6 bg-gray-50 p-4 rounded-xl border border-gray-100">
-            <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-1">ภาคเรียน/ปีการศึกษา:</label>
-                <select id="approveTermSelect" class="border border-gray-300 rounded-lg p-2 outline-none min-w-[140px] bg-white text-sm"></select>
-            </div>
-            <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-1">ช่วงเวลา:</label>
-                <select id="approvePeriodSelect" class="border border-gray-300 rounded-lg p-2 outline-none min-w-[140px] bg-white text-sm">
-                    <option value="ก่อนกลางภาค">ก่อนกลางภาค</option>
-                    <option value="หลังกลางภาค">หลังกลางภาค</option>
-                </select>
-            </div>
-            <button onclick="loadSubmissionTracker()" class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition flex items-center gap-2 shadow-md font-bold text-sm">
-                <i class="fa-solid fa-rotate"></i> โหลดข้อมูล/รีเฟรช
-            </button>
-        </div>
-
-        <div id="approveLoading" class="hidden text-center py-6 text-gray-500">
-            <div class="loader mb-3 mx-auto border-indigo-500"></div>
-            <p>กำลังโหลดรายวิชาที่ส่งสำเนา...</p>
-        </div>
-
-        <div id="approveResult" class="overflow-x-auto table-scrollbar mt-4">
-            <table class="w-full text-left border-collapse min-w-[800px] text-sm">
-                <thead>
-                    <tr class="bg-gray-100 text-gray-700 border-b border-gray-200 font-bold">
-                        <th class="p-3 w-16 text-center">ลำดับ</th>
-                        <th class="p-3 w-28">รหัสวิชา</th>
-                        <th class="p-3">ชื่อวิชา</th>
-                        <th class="p-3 w-24 text-center">ชั้น/ห้อง</th>
-                        <th class="p-3 w-40">ครูผู้สอน</th>
-                        <th class="p-3 w-36 text-center">วันที่ส่งสำเนา</th>
-                        <th class="p-3 w-32 text-center">สถานะ</th>
-                        <th class="p-3 text-center w-52">จัดการอนุมัติ</th>
-                    </tr>
-                </thead>
-                <tbody id="approveTableBody" class="divide-y divide-gray-100">
-                    <tr>
-                        <td colspan="8" class="p-8 text-center text-gray-400">กรุณากดปุ่ม "โหลดข้อมูล/รีเฟรช" เพื่อเริ่มต้น</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-
-
-<div id="viewDatabase" class="hidden fade-in">
-
-    
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-        <div class="flex justify-between items-center mb-4 pb-2 border-b border-gray-100">
-            <h3 class="text-lg font-bold text-gray-800 flex items-center">
-                <i class="fa-solid fa-database text-blue-500 mr-2"></i> เพิ่ม/แก้ไขฐานข้อมูลต่างๆ ด้วยฟอร์ม
-            </h3>
-            <button onclick="addFormRow()" class="bg-blue-100 text-blue-700 px-4 py-2 rounded-lg hover:bg-blue-200 text-sm font-bold shadow-sm transition">
-                <i class="fa-solid fa-plus"></i> เพิ่มแถวข้อมูล
-            </button>
-        </div>
-
-        <div class="mb-4">
-            <div class="flex flex-wrap gap-4 mb-3">
-                <label class="flex items-center gap-2 cursor-pointer bg-gray-50 px-4 py-2 rounded-lg border border-gray-200 hover:bg-blue-50 transition">
-                    <input type="radio" name="uploadType" value="teachers" checked onchange="renderFormTable()" class="w-4 h-4 text-blue-600">
-                    <span class="text-sm font-medium text-gray-800">จัดการข้อมูลครู/สิทธิ์</span>
-                </label>
-                <label class="flex items-center gap-2 cursor-pointer bg-gray-50 px-4 py-2 rounded-lg border border-gray-200 hover:bg-blue-50 transition">
-                    <input type="radio" name="uploadType" value="teachingLoad" onchange="renderFormTable()" class="w-4 h-4 text-blue-600">
-                    <span class="text-sm font-medium text-gray-800">จัดการภาระงานสอน</span>
-                </label>
-                
-                <label class="flex items-center gap-2 cursor-pointer bg-green-50 px-4 py-2 rounded-lg border border-green-200 hover:bg-green-100 transition">
-                    <input type="radio" name="uploadType" value="clubTeachers" onchange="renderFormTable()" class="w-4 h-4 text-green-600">
-                    <span class="text-sm font-bold text-green-800">จัดการครูประจำชุมนุม</span>
-                </label>
-            </div>
-            
-            <label class="flex items-center gap-2 cursor-pointer mt-4 p-2 bg-red-50 rounded border border-red-200 w-max">
-                <input type="checkbox" id="overwriteCheck" class="w-4 h-4 text-red-600">
-                <span class="text-xs font-bold text-red-700"><i class="fa-solid fa-triangle-exclamation"></i> ล้างข้อมูลเก่าทิ้งทั้งหมด (เขียนทับด้วยข้อมูลชุดนี้)</span>
-            </label>
-        </div>
-        
-        <div class="overflow-x-auto border rounded-lg table-scrollbar mt-4">
-            <table class="w-full text-left border-collapse min-w-[700px]">
-                <thead id="dbFormHead" class="bg-gray-100 text-gray-700 text-sm"></thead>
-                <tbody id="dbFormBody"></tbody>
-            </table>
-        </div>
-
-        <div class="mt-6 flex justify-end">
-            <button id="btnSaveDb" onclick="saveDbData()" class="bg-green-600 text-white px-8 py-3 rounded-lg hover:bg-green-700 transition flex items-center gap-2 font-bold shadow-md">
-                <i class="fa-solid fa-cloud-arrow-up"></i> บันทึกข้อมูลตาราง
-            </button>
-        </div>
-    </div>
-    
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-        <h3 class="text-lg font-bold text-gray-800 mb-4 pb-2 border-b border-gray-100 flex items-center">
-            <i class="fa-solid fa-table-list text-blue-500 mr-2"></i> ตรวจสอบภาระงานสอนที่มีในระบบ
-        </h3>
-        <div class="mb-4 bg-blue-50/60 p-4 rounded-xl border border-blue-200 shadow-sm">
-            <div class="flex flex-wrap items-end justify-between gap-3 mb-4">
-                <div class="flex flex-wrap items-end gap-3">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 mb-1">ภาคเรียน:</label>
-                        <input type="text" id="checkTerm" class="border border-gray-300 rounded-lg p-2 w-16 text-center text-sm font-bold bg-white shadow-inner" value="1">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 mb-1">ปีการศึกษา:</label>
-                        <input type="text" id="checkYear" class="border border-gray-300 rounded-lg p-2 w-20 text-center text-sm font-bold bg-white shadow-inner" value="2569">
-                    </div>
-                    <button onclick="loadExistingTeachingLoad()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-5 rounded-lg shadow-md transition duration-200 text-sm">
-                        <i class="fa-solid fa-rotate mr-1"></i> โหลดข้อมูล
-                    </button>
-                </div>
-                <div class="w-full sm:w-72">
-                    <label class="block text-xs font-bold text-gray-700 mb-1">ค้นหาครู / รหัสวิชา:</label>
-                    <div class="relative">
-                        <input type="text" id="searchTeachingLoad" oninput="renderGroupedTeachingLoad()" placeholder="พิมพ์ชื่อครู หรือรหัสวิชา..." class="w-full border border-gray-300 rounded-lg p-2 pl-8 text-sm bg-white shadow-sm outline-none focus:ring-2 focus:ring-blue-500">
-                        <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-3 text-gray-400 text-xs"></i>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ปุ่มแท็บแยกระดับชั้น ม.1 - ม.6 -->
-            <div class="pt-3 border-t border-blue-200/80">
-                <div class="text-xs font-bold text-gray-700 mb-2 flex items-center justify-between">
-                    <span><i class="fa-solid fa-filter mr-1 text-blue-600"></i> เลือกระดับชั้นที่ต้องการดูข้อมูล:</span>
-                    <span id="currentLevelBadge" class="text-blue-800 font-bold bg-blue-100 px-3 py-0.5 rounded-full text-xs shadow-inner">ทุกระดับชั้น (ม.1 - ม.6)</span>
-                </div>
-                <div class="flex flex-wrap gap-2" id="levelTabButtons">
-                    <button type="button" onclick="selectTeachingLoadLevel('ALL')" id="lvlBtn_ALL" class="lvl-tab-btn px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-md bg-blue-600 text-white border border-blue-600">
-                        <i class="fa-solid fa-layer-group"></i> ทุกระดับชั้น <span id="count_ALL" class="ml-1 bg-white/25 text-white px-2 py-0.5 rounded-full text-[10px]"></span>
-                    </button>
-                    <button type="button" onclick="selectTeachingLoadLevel('ม.1')" id="lvlBtn_M1" class="lvl-tab-btn px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm bg-white text-gray-700 hover:bg-blue-50 border border-gray-200">
-                        📚 ระดับชั้น ม.1 <span id="count_M1" class="ml-1 bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full text-[10px]"></span>
-                    </button>
-                    <button type="button" onclick="selectTeachingLoadLevel('ม.2')" id="lvlBtn_M2" class="lvl-tab-btn px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm bg-white text-gray-700 hover:bg-blue-50 border border-gray-200">
-                        📚 ระดับชั้น ม.2 <span id="count_M2" class="ml-1 bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full text-[10px]"></span>
-                    </button>
-                    <button type="button" onclick="selectTeachingLoadLevel('ม.3')" id="lvlBtn_M3" class="lvl-tab-btn px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm bg-white text-gray-700 hover:bg-blue-50 border border-gray-200">
-                        📚 ระดับชั้น ม.3 <span id="count_M3" class="ml-1 bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full text-[10px]"></span>
-                    </button>
-                    <button type="button" onclick="selectTeachingLoadLevel('ม.4')" id="lvlBtn_M4" class="lvl-tab-btn px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm bg-white text-gray-700 hover:bg-blue-50 border border-gray-200">
-                        📚 ระดับชั้น ม.4 <span id="count_M4" class="ml-1 bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full text-[10px]"></span>
-                    </button>
-                    <button type="button" onclick="selectTeachingLoadLevel('ม.5')" id="lvlBtn_M5" class="lvl-tab-btn px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm bg-white text-gray-700 hover:bg-blue-50 border border-gray-200">
-                        📚 ระดับชั้น ม.5 <span id="count_M5" class="ml-1 bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full text-[10px]"></span>
-                    </button>
-                    <button type="button" onclick="selectTeachingLoadLevel('ม.6')" id="lvlBtn_M6" class="lvl-tab-btn px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm bg-white text-gray-700 hover:bg-blue-50 border border-gray-200">
-                        📚 ระดับชั้น ม.6 <span id="count_M6" class="ml-1 bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full text-[10px]"></span>
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <div id="teachingLoadSummary" class="hidden mb-3 text-xs font-bold text-blue-900 bg-blue-100/70 px-4 py-2.5 rounded-xl flex items-center justify-between border border-blue-200">
-            <span id="teachingLoadStatsText"></span>
-            <span class="text-gray-600 font-normal"><i class="fa-solid fa-circle-check text-green-600 mr-1"></i> รวมห้องที่ครูสอนวิชาเดียวกันในระดับชั้นเดียวกัน</span>
-        </div>
-        <div class="overflow-x-auto border rounded-lg table-scrollbar max-h-[50vh]">
-            <table class="w-full text-left border-collapse text-sm">
-                <thead class="bg-gray-100 text-gray-700 sticky top-0 shadow-sm">
-                    <tr>
-                        <th class="p-3 border-b border-gray-200">ชื่อครูผู้สอน</th>
-                        <th class="p-3 border-b border-gray-200">รหัสวิชา</th>
-                        <th class="p-3 border-b border-gray-200">ชื่อรายวิชา</th>
-                        <th class="p-3 border-b border-gray-200 text-center">ระดับชั้น</th>
-                        <th class="p-3 border-b border-gray-200 text-center">ห้อง</th>
-                    </tr>
-                </thead>
-                <tbody id="existingLoadBody">
-                    <tr><td colspan="5" class="p-6 text-center text-gray-500 font-medium">กรุณากดปุ่มเพื่อดึงข้อมูล</td></tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    
-    
-    <!-- ส่วนจัดการบัญชีผู้ใช้งานและรีเซ็ตรหัสผ่าน (NEW) -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div class="flex flex-col md:flex-row md:items-center justify-between pb-4 mb-4 border-b border-gray-100 gap-4">
-            <div>
-                <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2">
-                    <i class="fa-solid fa-users-gear text-blue-600"></i> จัดการบัญชีผู้ใช้งานและรีเซ็ตรหัสผ่าน
-                </h3>
-                <p class="text-xs text-gray-500 mt-0.5">ตรวจสอบสถานะบัญชีครูทุกคน และกดรีเซ็ตรหัสผ่านกลับเป็นรหัสเริ่มต้น (Password@123) ได้ทันที</p>
-            </div>
-            <div class="flex items-center gap-3">
-                <div class="relative">
-                    <input type="text" id="searchTeacherAccount" oninput="renderTeacherAccountsList()" placeholder="ค้นหาชื่อ หรือ Username..." class="pl-9 pr-4 py-2 border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500 w-56">
-                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
-                </div>
-                <button onclick="loadTeacherAccountsList()" class="px-3.5 py-2 bg-blue-50 text-blue-600 rounded-xl text-xs font-bold hover:bg-blue-100 transition flex items-center gap-1.5 border border-blue-200">
-                    <i class="fa-solid fa-arrows-rotate"></i> โหลดข้อมูล
-                </button>
-            </div>
-        </div>
-
-        <div id="teacherAccountSummary" class="mb-3 text-xs font-bold text-gray-700 bg-gray-50 px-4 py-2.5 rounded-xl flex items-center justify-between border border-gray-200">
-            <span id="teacherAccountStatsText">พบครูในระบบทั้งหมด 0 คน</span>
-            <span class="text-xs text-amber-700 font-normal"><i class="fa-solid fa-circle-info mr-1"></i> เมื่อรีเซ็ตรหัสผ่าน ระบบจะบังคับให้ครูเปลี่ยนรหัสใหม่ทันทีเมื่อล็อกอิน</span>
-        </div>
-
-        <div class="overflow-x-auto border rounded-xl table-scrollbar max-h-[50vh]">
-            <table class="w-full text-left border-collapse text-sm">
-                <thead class="bg-gray-100 text-gray-700 sticky top-0 shadow-sm text-xs">
-                    <tr>
-                        <th class="p-3 border-b border-gray-200 w-40">Username (รหัสประจำตัว)</th>
-                        <th class="p-3 border-b border-gray-200">ชื่อ - นามสกุล</th>
-                        <th class="p-3 border-b border-gray-200 text-center w-28">ห้องที่ปรึกษา</th>
-                        <th class="p-3 border-b border-gray-200 text-center w-28">สิทธิ์</th>
-                        <th class="p-3 border-b border-gray-200 text-center w-48">สถานะรหัสผ่าน</th>
-                        <th class="p-3 border-b border-gray-200 text-center w-36">การจัดการ</th>
-                    </tr>
-                </thead>
-                <tbody id="teacherAccountsBody">
-                    <tr><td colspan="6" class="p-6 text-center text-gray-500 font-medium">กดปุ่ม "โหลดข้อมูล" เพื่อดูรายชื่อบัญชี</td></tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <h3 class="text-lg font-bold text-gray-800 mb-4 pb-2 border-b border-gray-100 flex items-center justify-between">
-            <span><i class="fa-solid fa-file-excel text-green-600 mr-2"></i> นำเข้าข้อมูลด้วยไฟล์ (Excel/CSV)</span>
-        </h3>
-        
-        <div class="mb-4 flex flex-wrap gap-3">
-            <label class="flex items-center gap-2 cursor-pointer bg-purple-50 px-4 py-2 rounded-lg border border-purple-200 hover:bg-purple-100 transition">
-                <input type="radio" name="fileUploadType" value="teachers" onchange="updateUploadInstructions()" class="w-4 h-4 text-purple-600">
-                <span class="text-sm font-bold text-purple-800"><i class="fa-solid fa-chalkboard-user mr-1"></i> ข้อมูลครู / User</span>
-            </label>
-            <label class="flex items-center gap-2 cursor-pointer bg-amber-50 px-4 py-2 rounded-lg border border-amber-200 hover:bg-amber-100 transition">
-                <input type="radio" name="fileUploadType" value="students" onchange="updateUploadInstructions()" class="w-4 h-4 text-amber-600">
-                <span class="text-sm font-bold text-amber-800"><i class="fa-solid fa-users mr-1"></i> รายชื่อนักเรียน</span>
-            </label>
-            <label class="flex items-center gap-2 cursor-pointer bg-blue-50 px-4 py-2 rounded-lg border border-blue-200 hover:bg-blue-100 transition">
-                <input type="radio" name="fileUploadType" value="teachingLoad" checked onchange="updateUploadInstructions()" class="w-4 h-4 text-blue-600">
-                <span class="text-sm font-bold text-blue-800"><i class="fa-solid fa-book-open mr-1"></i> ภาระงานสอน (รายวิชา)</span>
-            </label>
-            <label class="flex items-center gap-2 cursor-pointer bg-green-50 px-4 py-2 rounded-lg border border-green-200 hover:bg-green-100 transition">
-                <input type="radio" name="fileUploadType" value="clubStudents" onchange="updateUploadInstructions()" class="w-4 h-4 text-green-600">
-                <span class="text-sm font-bold text-green-800"><i class="fa-solid fa-people-group mr-1"></i> นักเรียนชุมนุม</span>
-            </label>
-            <label class="flex items-center gap-2 cursor-pointer bg-teal-50 px-4 py-2 rounded-lg border border-teal-200 hover:bg-teal-100 transition">
-                <input type="radio" name="fileUploadType" value="isStudents" onchange="updateUploadInstructions()" class="w-4 h-4 text-teal-600">
-                <span class="text-sm font-bold text-teal-800"><i class="fa-solid fa-lightbulb mr-1"></i> นักเรียนวิชาการศึกษาค้นคว้าฯ (IS ม.2 / ม.4)</span>
-            </label>
-        </div>
-
-        <div class="flex flex-col md:flex-row gap-4 items-center">
-            <div class="flex-grow w-full border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:bg-gray-50 transition relative">
-                <input type="file" id="excelFileUpload" accept=".xlsx, .xls, .csv" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="handleExcelFileSelect(event)">
-                <div class="text-gray-500">
-                    <i class="fa-solid fa-cloud-arrow-up text-4xl mb-2 text-blue-500"></i>
-                    <p class="font-bold text-gray-700" id="excelFileNameDisplay">คลิกหรือลากไฟล์ Excel มาวางที่นี่</p>
-                    <p class="text-xs mt-1 text-blue-600 font-medium" id="excelInstructions">คอลัมน์ A-G: ชื่อครู | รหัสวิชา | ชื่อรายวิชา | ระดับชั้น | ห้อง | ภาคเรียน | ปีการศึกษา</p>
-                </div>
-            </div>
-            <div class="flex flex-col gap-2 w-full md:w-auto">
-                <label class="flex items-center gap-2 p-2 bg-red-50 rounded border border-red-200 cursor-pointer">
-                    <input type="checkbox" id="overwriteExcelCheck" class="w-4 h-4 text-red-600" checked>
-                    <span class="text-xs font-bold text-red-700">ล้างข้อมูลเดิมในแผ่นงาน (เขียนทับ)</span>
-                </label>
-                <button id="btnUploadExcel" onclick="processExcelUpload()" class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition font-bold shadow-md whitespace-nowrap opacity-50 cursor-not-allowed" disabled>
-                    <i class="fa-solid fa-upload mr-1"></i> เริ่มอัปโหลด
-                </button>
-            </div>
-        </div>
-        <div id="excelUploadStatus" class="hidden mt-4 text-sm font-medium text-center p-3 rounded-lg"></div>
-    </div>
-
-</div>
-
-</main>
-</div>
-
-
-<div id="toast" class="fixed bottom-6 right-6 bg-gray-800 text-white px-6 py-4 rounded-xl shadow-2xl transform transition-all duration-300 translate-y-24 opacity-0 flex items-center gap-3 z-50">
-<div class="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center"><i class="fa-solid fa-check text-white"></i></div>
-<div><p id="toastTitle" class="font-bold">สำเร็จ!</p><p id="toastDesc" class="text-xs text-gray-300">ระบบทำงานเรียบร้อย</p></div>
-</div>
-
-<script>
 let currentTeacherId="",currentTeacherName="",currentRole="";
 let currentTerm="",currentYear="",currentSystemStatus="OPEN", currentPeriod="ก่อนกลางภาค";
 let globalTeacherNames = []; 
@@ -1417,7 +524,7 @@ if(students.length===0){
             let makeSelect = (val) => `
                 <select class="w-full border border-gray-300 rounded-md p-2 text-center outline-none focus:border-blue-500 transition-colors status-select ${val==='ซ'?'bg-red-50 text-red-600 font-bold':'text-gray-500'}" onchange="updateActStyle(this)">
                     <option value="" ${!val?'selected':''}>- ปกติ -</option>
-                    <option value="ซ" class="text-red-600 font-bold" ${val==='ซ'?'selected':''}>ช</option>
+                    <option value="ซ" class="text-red-600 font-bold" ${val==='ซ'?'selected':''}>ติด ซ</option>
                 </select>
             `;
             tbody.innerHTML+=`
@@ -1436,13 +543,13 @@ if(students.length===0){
             let makeSelect = (val, cls) => `
                 <select class="w-full border border-gray-300 rounded-md p-2 text-center outline-none focus:border-blue-500 transition-colors ${cls} ${val==='ซ'?'bg-red-50 text-red-600 font-bold':'text-gray-500'}" onchange="updateActStyle(this)">
                     <option value="" ${!val?'selected':''}>- ปกติ -</option>
-                    <option value="ซ" class="text-red-600 font-bold" ${val==='ซ'?'selected':''}>ช</option>
+                    <option value="ซ" class="text-red-600 font-bold" ${val==='ซ'?'selected':''}>ติด ซ</option>
                 </select>
             `;
             
             let makeDisabledSelect = (val) => `
                 <select class="w-full border border-gray-200 rounded-md p-2 text-center bg-gray-100 text-gray-500 cursor-not-allowed text-xs" disabled title="ประเมินโดยครูชุมนุม">
-                    <option>${val === 'ซ' ? 'ช (ครูชุมนุม)' : (student.hasClubGrade ? 'ปกติ (ครูชุมนุม)' : 'รอครูชุมนุม')}</option>
+                    <option>${val === 'ซ' ? 'ติด ซ (ครูชุมนุม)' : (student.hasClubGrade ? 'ปกติ (ครูชุมนุม)' : 'รอครูชุมนุม')}</option>
                 </select>
                 <input type="hidden" class="score-3" value="${val || ''}">
             `;
@@ -1469,7 +576,7 @@ if(students.length===0){
         } else {
             let statSelect=`<select class="w-full border rounded p-1 text-center status-select ${student.status!=='ปกติ'&&student.status?'bg-red-50 text-red-600 font-bold':''}" onchange="updateStyle(this)">
             <option value="ปกติ" ${student.status==='ปกติ'||!student.status?'selected':''}>ปกติ</option>
-            <option value="ซ" class="text-red-500 font-bold" ${student.status==='ซ'?'selected':''}>ช</option>
+            <option value="ซ" class="text-red-500 font-bold" ${student.status==='ซ'?'selected':''}>ติด ซ</option>
             <option value="0" class="text-red-500 font-bold" ${student.status==='0'?'selected':''}>0</option>
             <option value="ร" class="text-orange-500 font-bold" ${student.status==='ร'?'selected':''}>ร</option>
             <option value="มส." class="text-red-500" ${student.status==='มส.'?'selected':''}>มส.</option>
@@ -3070,8 +2177,8 @@ function printScoreCopy() {
                     <div><b>ชั้น/ห้อง:</b> ${subjData.subjectCode === 'CLUB' ? 'ทุกห้อง' : 'ม.' + clLevel + '/' + subjData.room}</div>
                     <div><b>ครูผู้สอน:</b> ${currentTeacherName}</div>
                     <div><b>จำนวนนักเรียน:</b> ${students.length} คน</div>
-                    ${currentLoadedSubmission && currentLoadedSubmission.submitted_at ? `<div><b>วันที่ส่งสำเนา:</b> ${currentLoadedSubmission.submitted_at}</div>` : ''}
-                    <div><b>สถานะสำเนา:</b> ${currentLoadedSubmission ? (currentLoadedSubmission.status === 'Approved' ? 'อนุมัติแล้ว' : currentLoadedSubmission.status === 'Submitted' ? 'ส่งแล้ว รออนุมัติ' : 'แบบร่าง') : 'แบบร่าง'}</div>
+                    \${currentLoadedSubmission && currentLoadedSubmission.submitted_at ? `<div><b>วันที่ส่งสำเนา:</b> \${currentLoadedSubmission.submitted_at}</div>` : ''}
+                    <div><b>สถานะสำเนา:</b> \${currentLoadedSubmission ? (currentLoadedSubmission.status === 'Approved' ? 'อนุมัติแล้ว' : currentLoadedSubmission.status === 'Submitted' ? 'ส่งแล้ว รออนุมัติ' : 'แบบร่าง') : 'แบบร่าง'}</div>
                 </div>
             </div>
 
@@ -3081,7 +2188,7 @@ function printScoreCopy() {
                         <th style="border: 1px solid #000; width: 45px; padding: 6px; font-weight: bold;">เลขที่</th>
                         <th style="border: 1px solid #000; width: 85px; padding: 6px; font-weight: bold;">เลขประจำตัว</th>
                         <th style="border: 1px solid #000; text-align: left; padding: 6px 10px; font-weight: bold;">ชื่อ - นามสกุล</th>
-                        ${activeCols.map(col => `<th style="border: 1px solid #000; padding: 6px; font-weight: bold; min-width: 50px;">${col.name}</th>`).join('')}
+                        \${activeCols.map(col => `<th style="border: 1px solid #000; padding: 6px; font-weight: bold; min-width: 50px;">\${col.name}</th>`).join('')}
                         <th style="border: 1px solid #000; width: 90px; padding: 6px; font-weight: bold;">ผลการประเมิน</th>
                     </tr>
                 </thead>
@@ -3091,14 +2198,14 @@ function printScoreCopy() {
     students.forEach(st => {
         html += `
             <tr style="border-bottom: 1px solid #000;">
-                <td style="border: 1px solid #000; padding: 5px;">${st.no}</td>
-                <td style="border: 1px solid #000; padding: 5px; font-family: monospace;">${st.id}</td>
-                <td style="border: 1px solid #000; padding: 5px 10px; text-align: left; white-space: nowrap;">${st.name}</td>
-                ${activeCols.map(col => {
+                <td style="border: 1px solid #000; padding: 5px;">\${st.no}</td>
+                <td style="border: 1px solid #000; padding: 5px; font-family: monospace;">\${st.id}</td>
+                <td style="border: 1px solid #000; padding: 5px 10px; text-align: left; white-space: nowrap;">\${st.name}</td>
+                \${activeCols.map(col => {
                     let val = st['s' + col.index];
-                    return `<td style="border: 1px solid #000; padding: 5px;">${val !== undefined && val !== null ? val : ''}</td>`;
+                    return `<td style="border: 1px solid #000; padding: 5px;">\${val !== undefined && val !== null ? val : ''}</td>`;
                 }).join('')}
-                <td style="border: 1px solid #000; padding: 5px; font-weight: bold; ${st.status !== 'ปกติ' && st.status ? 'color: red;' : ''}">${st.status || 'ปกติ'}</td>
+                <td style="border: 1px solid #000; padding: 5px; font-weight: bold; \${st.status !== 'ปกติ' && st.status ? 'color: red;' : ''}">\${st.status || 'ปกติ'}</td>
             </tr>
         `;
     });
@@ -3110,7 +2217,7 @@ function printScoreCopy() {
             <div style="margin-top: 35px; page-break-inside: avoid; display: grid; grid-template-columns: 1fr 1fr; gap: 30px; font-size: 13px; text-align: center;">
                 <div style="padding: 10px;">
                     ลงชื่อ.................................................................ครูผู้สอน<br>
-                    ( ${currentTeacherName} )<br>
+                    ( \${currentTeacherName} )<br>
                     ตำแหน่ง.................................................................<br>
                     ......./......./.......
                 </div>
@@ -3143,7 +2250,7 @@ function closePrintPreviewModal() {
 function triggerBrowserPrint() {
     const printArea = document.getElementById("printArea");
     const w = window.open();
-    w.document.write(`
+    w.document.write(\`
         <html>
             <head>
                 <title>พิมพ์สำเนาคะแนน</title>
@@ -3156,7 +2263,7 @@ function triggerBrowserPrint() {
                 </style>
             </head>
             <body>
-                ${printArea.innerHTML}
+                \${printArea.innerHTML}
                 <script>
                     window.onload = function() {
                         window.print();
@@ -3165,7 +2272,7 @@ function triggerBrowserPrint() {
                 <\/script>
             </body>
         </html>
-    `);
+    \`);
     w.document.close();
 }
 
@@ -3173,7 +2280,7 @@ function downloadScoreCopyPDF() {
     const element = document.getElementById('printArea');
     const select = document.getElementById("subjectSelect");
     const subjData = JSON.parse(select.value);
-    const filename = `สำเนาคะแนน_${subjData.subjectCode}_ห้อง_${subjData.room}_เทอม_${currentTerm}-${currentYear}.pdf`;
+    const filename = \`สำเนาคะแนน_\${subjData.subjectCode}_ห้อง_\${subjData.room}_เทอม_\${currentTerm}-\\${currentYear}.pdf\`;
     
     html2pdf().set({
         margin: [0.5, 0.5, 0.5, 0.5],
@@ -3337,6 +2444,3 @@ function showToast(title, desc) {
     }, 3500);
 }
 
-</script>
-</body>
-</html>

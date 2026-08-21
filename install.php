@@ -264,8 +264,26 @@ SQL;
                     </div>
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-1">Database Password (รหัสผ่าน):</label>
-                        <input type="password" name="db_pass" value="<?= htmlspecialchars($dbpass) ?>" class="w-full border border-gray-300 rounded-xl p-2.5 outline-none focus:border-blue-500 text-sm" placeholder="ไม่มีรหัสผ่าน (หากไม่ได้ตั้งค่า)">
+                        <div class="relative">
+                            <input type="password" id="dbPassInput" name="db_pass" value="<?= htmlspecialchars($dbpass) ?>" class="w-full border border-gray-300 rounded-xl p-2.5 pr-10 outline-none focus:border-blue-500 text-sm" placeholder="ไม่มีรหัสผ่าน (หากไม่ได้ตั้งค่า)">
+                            <button type="button" onclick="togglePass()" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                                <span id="eyeIcon">👁️</span>
+                            </button>
+                        </div>
                     </div>
+                    <script>
+                    function togglePass() {
+                        var inp = document.getElementById('dbPassInput');
+                        var icon = document.getElementById('eyeIcon');
+                        if (inp.type === 'password') {
+                            inp.type = 'text';
+                            icon.textContent = '🔒';
+                        } else {
+                            inp.type = 'password';
+                            icon.textContent = '👁️';
+                        }
+                    }
+                    </script>
                     <div class="pt-4">
                         <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition shadow-md text-sm">
                             เริ่มติดตั้งระบบ/อัปเดตตารางฐานข้อมูล
