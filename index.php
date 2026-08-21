@@ -892,6 +892,24 @@ tr.hover\:bg-blue-50\/50:hover td.sticky-col-1, tr.hover\:bg-blue-50\/50:hover t
 </div>
 
 <script>
+window.onerror = function(message, source, lineno, colno, error) {
+    const errorBanner = document.createElement("div");
+    errorBanner.style.position = "fixed";
+    errorBanner.style.top = "0";
+    errorBanner.style.left = "0";
+    errorBanner.style.width = "100%";
+    errorBanner.style.backgroundColor = "#fee2e2";
+    errorBanner.style.color = "#991b1b";
+    errorBanner.style.padding = "10px";
+    errorBanner.style.zIndex = "9999";
+    errorBanner.style.fontSize = "12px";
+    errorBanner.style.borderBottom = "2px solid #ef4444";
+    errorBanner.style.textAlign = "left";
+    errorBanner.innerHTML = "<b>[JS Error]:</b> " + message + " at " + source + ":" + lineno + ":" + colno;
+    document.body.appendChild(errorBanner);
+    console.error("Global JS Error:", message, source, lineno, colno, error);
+    return false;
+};
 let currentTeacherId="",currentTeacherName="",currentRole="";
 let currentTerm="",currentYear="",currentSystemStatus="OPEN", currentPeriod="ก่อนกลางภาค";
 let globalTeacherNames = []; 
