@@ -21,6 +21,21 @@ body{font-family:'Sarabun',sans-serif;background-color:#f3f4f6;}
 .status-warning{color:#f97316;font-weight:bold;}
 .input-cell{min-width:60px;}
 
+#mainTable {
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+}
+#mainTable td {
+    border-bottom: 1px solid #f1f5f9;
+}
+thead th {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background-color: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+}
+
 .sticky-col-1 {
     position: sticky;
     left: 0;
@@ -311,8 +326,8 @@ tr.hover\:bg-blue-50\/50:hover td.sticky-col-1, tr.hover\:bg-blue-50\/50:hover t
 </div>
 </div>
 <div class="overflow-x-auto table-scrollbar" style="max-height: 60vh;">
-<table id="mainTable" class="w-full text-left border-collapse min-w-[1200px]">
-<thead id="tableHeader" class="sticky top-0 bg-gray-50 z-10 shadow-sm"></thead>
+<table id="mainTable" class="w-full text-left min-w-[1200px]">
+<thead id="tableHeader" class="bg-gray-50 shadow-sm"></thead>
 <tbody id="studentTableBody" class="text-sm"></tbody>
 </table>
 </div>
