@@ -16,7 +16,85 @@ window.onerror = function(message, source, lineno, colno, error) {
     document.body.appendChild(errorBanner);
     console.error("Global JS Error:", message, source, lineno, colno, error);
     return false;
-};
+// Global Event Delegator to bypass strict CSP blocking inline event handlers
+function executeExpression(exprStr, eventObj) {
+    if (!exprStr) return;
+    exprStr = exprStr.trim();
+    const match = exprStr.match(/^([a-zA-Z0-9_]+)\((.*)\)$/);
+    if (!match) return;
+    const funcName = match[1];
+    const argsStr = match[2].trim();
+    const func = window[funcName];
+    if (typeof func !== 'function') {
+        console.error("Function not found:", funcName);
+        return;
+    }
+    if (argsStr === '') {
+        func();
+    } else {
+        const args = [];
+        let currentArg = '';
+        let inQuotes = false;
+        let quoteChar = '';
+        for (let i = 0; i < argsStr.length; i++) {
+            const char = argsStr[i];
+            if ((char === "'" || char === '"') && (i === 0 || argsStr[i-1] !== '\\')) {
+                if (inQuotes && char === quoteChar) {
+                    inQuotes = false;
+                } else if (!inQuotes) {
+                    inQuotes = true;
+                    quoteChar = char;
+                } else {
+                    currentArg += char;
+                }
+            } else if (char === ',' && !inQuotes) {
+                args.push(parseArgValue(currentArg.trim(), eventObj));
+                currentArg = '';
+            } else {
+                currentArg += char;
+            }
+        }
+        if (currentArg.trim() !== '') {
+            args.push(parseArgValue(currentArg.trim(), eventObj));
+        }
+        func.apply(null, args);
+    }
+}
+function parseArgValue(val, eventObj) {
+    if (val === 'event') return eventObj;
+    if (val === 'true') return true;
+    if (val === 'false') return false;
+    if (val === 'null') return null;
+    if (!isNaN(val) && val !== '') return Number(val);
+    if ((val.startsWith("'") && val.endsWith("'")) || (val.startsWith('"') && val.endsWith('"'))) {
+        return val.substring(1, val.length - 1);
+    }
+    return val;
+}
+document.addEventListener('click', (event) => {
+    let target = event.target;
+    while (target && target !== document) {
+        if (target.hasAttribute('onclick')) {
+            const clickStr = target.getAttribute('onclick');
+            executeExpression(clickStr, event);
+            event.preventDefault();
+            break;
+        }
+        target = target.parentNode;
+    }
+}, true);
+document.addEventListener('change', (event) => {
+    let target = event.target;
+    while (target && target !== document) {
+        if (target.hasAttribute('onchange')) {
+            const changeStr = target.getAttribute('onchange');
+            executeExpression(changeStr, event);
+            break;
+        }
+        target = target.parentNode;
+    }
+}, true);
+
 let currentTeacherId="",currentTeacherName="",currentRole="";
 let currentTerm="",currentYear="",currentSystemStatus="OPEN", currentPeriod="ก่อนกลางภาค";
 let globalTeacherNames = []; 
