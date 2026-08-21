@@ -1296,7 +1296,7 @@ option.value=JSON.stringify(subj);
 if(subj.subjectCode === "CLUB") {
     option.text=`${subj.subjectName} | ชุมนุม`;
 } else {
-    let clLevel = subj.classLevel.toString().replace(/[ม\\.]/g, '').trim(); 
+    let clLevel = subj.classLevel ? subj.classLevel.toString().replace(/[ม\\.]/g, '').trim() : ''; 
     option.text=`${subj.subjectName} | ม.${clLevel}/${subj.room}`;
 }
 select.appendChild(option);
