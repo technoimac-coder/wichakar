@@ -3252,20 +3252,20 @@ function loadSubmissionTracker() {
                 } else if (sub.status === "Approved") {
                     statusBadge = `<span class="bg-green-100 text-green-700 px-2.5 py-1 rounded-full text-xs font-bold border border-green-200">อนุมัติแล้ว</span>`;
                 } else if (sub.status === "Rejected") {
-                    statusBadge = `<span class="bg-red-100 text-red-700 px-2.5 py-1 rounded-full text-xs font-bold border border-red-200" title="เหตุผล: ${sub.reject_reason || ''}">ตีกลับแก้ไข</span>`;
+                    statusBadge = `<span class="bg-red-100 text-red-700 px-2.5 py-1 rounded-full text-xs font-bold border border-red-200" title="เหตุผล: ${sub.rejectReason || ''}">ตีกลับแก้ไข</span>`;
                 }
 
-                let clLevel = sub.class_level.toString().replace(/[ม\\.]/g, '').trim();
-                let roomStr = sub.subject_code === "CLUB" ? "รวม" : "ม." + clLevel + "/" + sub.room;
+                let clLevel = sub.classLevel ? sub.classLevel.toString().replace(/[ม\\.]/g, '').trim() : '';
+                let roomStr = sub.subjectCode === "CLUB" ? "รวม" : "ม." + clLevel + "/" + sub.room;
 
                 let actionHtml = "";
                 if (sub.status === "Submitted") {
                     actionHtml = `
                         <div class="flex gap-2 justify-center">
-                            <button onclick="adminApproveSubmission('${sub.subject_code}', '${sub.room}')" class="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded font-bold text-xs transition shadow-sm">
+                            <button onclick="adminApproveSubmission('${sub.subjectCode}', '${sub.room}')" class="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded font-bold text-xs transition shadow-sm">
                                 อนุมัติ
                             </button>
-                            <button onclick="adminRejectSubmission('${sub.subject_code}', '${sub.room}')" class="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded font-bold text-xs transition shadow-sm">
+                            <button onclick="adminRejectSubmission('${sub.subjectCode}', '${sub.room}')" class="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded font-bold text-xs transition shadow-sm">
                                 ตีกลับ
                             </button>
                         </div>
@@ -3273,7 +3273,7 @@ function loadSubmissionTracker() {
                 } else if (sub.status === "Approved") {
                     actionHtml = `
                         <div class="flex gap-2 justify-center">
-                            <button onclick="adminRejectSubmission('${sub.subject_code}', '${sub.room}', true)" class="px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded font-bold text-xs transition shadow-sm">
+                            <button onclick="adminRejectSubmission('${sub.subjectCode}', '${sub.room}', true)" class="px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded font-bold text-xs transition shadow-sm">
                                 ปลดล็อก/ตีกลับ
                             </button>
                         </div>
@@ -3285,11 +3285,11 @@ function loadSubmissionTracker() {
                 tbody.innerHTML += `
                     <tr class="hover:bg-gray-50/50">
                         <td class="p-3 text-center text-gray-500 font-mono">${index + 1}</td>
-                        <td class="p-3 font-bold font-mono text-gray-700">${sub.subject_code}</td>
-                        <td class="p-3 font-medium text-gray-800">${sub.subject_name}</td>
+                        <td class="p-3 font-bold font-mono text-gray-700">${sub.subjectCode}</td>
+                        <td class="p-3 font-medium text-gray-800">${sub.subjectName}</td>
                         <td class="p-3 text-center font-semibold text-gray-600">${roomStr}</td>
-                        <td class="p-3 text-gray-600">${sub.teacher_name}</td>
-                        <td class="p-3 text-center text-xs text-gray-500 font-mono">${sub.submitted_at || '-'}</td>
+                        <td class="p-3 text-gray-600">${sub.teacher}</td>
+                        <td class="p-3 text-center text-xs text-gray-500 font-mono">${sub.submittedAt || '-'}</td>
                         <td class="p-3 text-center">${statusBadge}</td>
                         <td class="p-3 text-center">${actionHtml}</td>
                     </tr>
