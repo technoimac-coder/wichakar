@@ -1297,7 +1297,7 @@ if(subj.subjectCode === "CLUB") {
     option.text=`${subj.subjectName} | ชุมนุม`;
 } else {
     let clLevel = subj.classLevel.toString().replace(/[ม\\.]/g, '').trim(); 
-    option.text=`${subj.subjectCode} ${subj.subjectName} | ม.${clLevel}/${subj.room}`;
+    option.text=`${subj.subjectName} | ม.${clLevel}/${subj.room}`;
 }
 select.appendChild(option);
 });

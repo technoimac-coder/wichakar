@@ -359,7 +359,7 @@ switch ($action) {
                     if (!empty($advLvl) && !empty($advR)) {
                         $subjects[] = [
                             "subjectCode" => "VOLUNTEER",
-                            "subjectName" => "จิตอาสา (กิจกรรมเพื่อสังคมและสาธารณประโยชน์) " . $advLvl . "/" . $advR,
+                            "subjectName" => "จิตอาสา (กิจกรรมเพื่อสังคมและสาธารณประโยชน์)",
                             "classLevel" => $advLvl,
                             "room" => $advR,
                             "teacher" => $ar["name"]
