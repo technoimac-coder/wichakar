@@ -16,6 +16,7 @@ window.onerror = function(message, source, lineno, colno, error) {
     document.body.appendChild(errorBanner);
     console.error("Global JS Error:", message, source, lineno, colno, error);
     return false;
+};
 // Global Event Delegator to bypass strict CSP blocking inline event handlers
 function executeExpression(exprStr, eventObj) {
     if (!exprStr) return;
