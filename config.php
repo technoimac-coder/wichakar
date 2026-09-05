@@ -1,13 +1,8 @@
 <?php
-/**
- * การตั้งค่าเชื่อมต่อฐานข้อมูล MySQL บน HostAtom
- * โรงเรียนมกุฎเมืองราชวิทยาลัย (โดเมน: wichakar.mmvschool.ac.th)
- */
-
 define("DB_HOST", "localhost");
-define("DB_NAME", "mmvsc_wichakar");          // ชื่อฐานข้อมูล
-define("DB_USER", "mmvsc_wichakar");          // ชื่อผู้ใช้ฐานข้อมูล
-define("DB_PASS", "0RMYfx%kk9*ghkd1");         // รหัสผ่านฐานข้อมูล
+define("DB_NAME", "mmvsc_wichakar");
+define("DB_USER", "mmvsc_school_db");
+define("DB_PASS", "Password@123");
 
 function getDB() {
     try {
