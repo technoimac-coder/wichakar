@@ -154,6 +154,30 @@ function formatRooms(rooms) {
     return [...ranges, ...nonNums].join(', ');
 }
 
+function initLoginPage() {
+    const loginBtn = document.getElementById("loginBtn");
+    if (loginBtn) {
+        loginBtn.onclick = handleLogin;
+    }
+    const pinInput = document.getElementById("teacherPin");
+    if (pinInput) {
+        pinInput.onkeypress = function(e) {
+            if (e.key === "Enter") handleLogin();
+        };
+    }
+    const idInput = document.getElementById("teacherId");
+    if (idInput) {
+        idInput.onkeypress = function(e) {
+            if (e.key === "Enter" && pinInput) pinInput.focus();
+        };
+    }
+}
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initLoginPage);
+} else {
+    initLoginPage();
+}
+
 window.addEventListener('DOMContentLoaded',()=>{
 const savedSession=sessionStorage.getItem('mmv_session');
 if(savedSession){
