@@ -83,8 +83,48 @@ tr.hover\:bg-green-50\/50:hover td.sticky-col-1, tr.hover\:bg-green-50\/50:hover
     background-color: #f0fdf4 !important;
 }
 /* Special row backgrounds for normal subject blue hover rows */
-tr.hover\:bg-blue-50\/50:hover td.sticky-col-1, tr.hover\:bg-blue-50\/50:hover td.sticky-col-2, tr.hover\:bg-blue-50\/50:hover td.sticky-col-3 {
-    background-color: #eff6ff !important;
+/* Isolate stacking context so sticky elements stay trapped inside main app view */
+#mainAppSection, #viewGrading, #gradingSection, .overflow-x-auto {
+    isolation: isolate;
+}
+
+/* Reset sticky positioning inside print modal preview container */
+#printPreviewModal .sticky-col-1,
+#printPreviewModal .sticky-col-2,
+#printPreviewModal .sticky-col-3,
+#printPreviewModal thead th,
+#printArea .sticky-col-1,
+#printArea .sticky-col-2,
+#printArea .sticky-col-3,
+#printArea thead th {
+    position: static !important;
+    box-shadow: none !important;
+    z-index: auto !important;
+}
+
+/* Reset sticky positioning for print modal preview and browser printing */
+@media print {
+    body * {
+        visibility: hidden !important;
+    }
+    #printArea, #printArea * {
+        visibility: visible !important;
+    }
+    #printArea {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+        border: none !important;
+    }
+    .sticky-col-1, .sticky-col-2, .sticky-col-3, thead th {
+        position: static !important;
+        box-shadow: none !important;
+        z-index: auto !important;
+    }
 }
 </style>
 </head>
