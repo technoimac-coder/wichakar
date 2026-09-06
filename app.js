@@ -2287,20 +2287,20 @@ function printScoreCopy() {
         students.push(sData);
     });
 
-    // 3. ประกอบโครงสร้างเอกสารพิมพ์ (ปรับขนาดให้กระชับ เพื่อให้อยู่ในกระดาษ A4 หน้าเดียว)
+    // 3. ประกอบโครงสร้างเอกสารพิมพ์ (ปรับให้ชิดขอบบน ฟอนต์ Sarabun 16pt ตัวหนา)
     let titleStr = "แบบบันทึกสำเนาคะแนนเก็บนักเรียน (สำเนา ปพ.5)";
     if (subjData.subjectCode === "CLUB") titleStr = "แบบบันทึกผลการประเมินกิจกรรมชุมนุม";
     else if (subjData.subjectCode === "ACT99") titleStr = "แบบบันทึกผลกิจกรรมพัฒนาผู้เรียน";
 
     let html = `
-        <div style="font-family: 'Sarabun', sans-serif; padding: 4px; font-size: 11px; color: #000; line-height: 1.2;">
-            <div style="text-align: center; margin-bottom: 8px;">
-                <h2 style="font-size: 16px; font-weight: bold; margin: 0; color: #000;">${titleStr}</h2>
-                <h3 style="font-size: 13px; font-weight: bold; margin: 2px 0 0 0;">โรงเรียนมกุฎเมืองราชวิทยาลัย</h3>
-                <p style="font-size: 11px; margin: 2px 0 6px 0;">
+        <div style="font-family: 'Sarabun', sans-serif; padding: 0px; margin: 0px; font-size: 11px; color: #000; line-height: 1.2;">
+            <div style="text-align: center; margin-top: 0px; margin-bottom: 6px;">
+                <h2 style="font-family: 'Sarabun', sans-serif; font-size: 16pt; font-weight: bold; margin: 0; padding: 0; color: #000;">${titleStr}</h2>
+                <h3 style="font-family: 'Sarabun', sans-serif; font-size: 14pt; font-weight: bold; margin: 2px 0 0 0; color: #000;">โรงเรียนมกุฎเมืองราชวิทยาลัย</h3>
+                <p style="font-family: 'Sarabun', sans-serif; font-size: 11pt; font-weight: bold; margin: 2px 0 6px 0; color: #000;">
                     <b>ภาคเรียนที่:</b> ${currentTerm} &nbsp;|&nbsp; <b>ปีการศึกษา:</b> ${currentYear} &nbsp;|&nbsp; <b>ช่วงเวลา:</b> ${currentPeriod}
                 </p>
-                <div style="text-align: left; font-size: 11px; display: grid; grid-template-columns: 1fr 1fr; gap: 3px 12px; border: 1px solid #cbd5e1; padding: 6px 10px; border-radius: 6px; background-color: #f8fafc; margin-bottom: 6px;">
+                <div style="text-align: left; font-size: 11px; display: grid; grid-template-columns: 1fr 1fr; gap: 3px 12px; border: 1px solid #cbd5e1; padding: 5px 10px; border-radius: 6px; background-color: #f8fafc; margin-bottom: 6px;">
                     <div><b>รายวิชา:</b> ${subjData.subjectCode !== 'CLUB' ? subjData.subjectCode + ' ' : ''}${subjData.subjectName}</div>
                     <div><b>ชั้น/ห้อง:</b> ${subjData.subjectCode === 'CLUB' ? 'ทุกห้อง' : 'ม.' + clLevel + '/' + subjData.room}</div>
                     <div><b>ครูผู้สอน:</b> ${currentTeacherName}</div>
@@ -2385,14 +2385,14 @@ function triggerBrowserPrint() {
             <title>พิมพ์สำเนาคะแนน (ปพ.5)</title>
             <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
             <style>
-                @page { size: A4 portrait; margin: 6mm 8mm; }
+                @page { size: A4 portrait; margin: 4mm 8mm; }
                 * { box-sizing: border-box; }
                 body { font-family: 'Sarabun', sans-serif; margin: 0; padding: 0; background: white; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 6px; }
+                table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 4px; }
                 th, td { border: 1px solid #000 !important; padding: 2px 4px; }
                 th { background-color: #f1f5f9 !important; font-weight: bold; }
                 @media print {
-                    body { padding: 0; }
+                    body { padding: 0; margin: 0; }
                     div { page-break-inside: avoid; }
                 }
             </style>
@@ -2418,10 +2418,10 @@ function downloadScoreCopyPDF() {
     const filename = `สำเนาคะแนน_${subjData.subjectCode}_ห้อง_${subjData.room}_เทอม_${currentTerm}-${currentYear}.pdf`;
     
     html2pdf().set({
-        margin: [0.25, 0.35, 0.25, 0.35],
+        margin: [0.15, 0.25, 0.15, 0.25],
         filename: filename,
         image: { type: 'jpeg', quality: 1.0 },
-        html2canvas: { scale: 2, useCORS: true, logging: false },
+        html2canvas: { scale: 2, useCORS: true, logging: false, scrollY: 0, windowY: 0 },
         jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
     }).from(element).save();
 }
