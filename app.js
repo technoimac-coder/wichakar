@@ -2361,41 +2361,43 @@ function printScoreCopy() {
     `;
 
     document.getElementById("printArea").innerHTML = html;
-    const section = document.getElementById("gradingSection");
-    if (section) section.style.visibility = "hidden";
     document.getElementById("printPreviewModal").classList.remove("hidden");
 }
 
 function closePrintPreviewModal() {
     document.getElementById("printPreviewModal").classList.add("hidden");
-    const section = document.getElementById("gradingSection");
-    if (section) section.style.visibility = "visible";
 }
 
 function triggerBrowserPrint() {
     const printArea = document.getElementById("printArea");
-    const w = window.open();
+    if (!printArea) return;
+    const w = window.open('', '_blank');
     w.document.write(`
-        <html>
-            <head>
-                <title>พิมพ์สำเนาคะแนน</title>
-                <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
-                <style>
-                    body { font-family: 'Sarabun', sans-serif; padding: 20px; background: white; }
-                    @media print {
-                        body { padding: 0; }
-                    }
-                </style>
-            </head>
-            <body>
-                ${printArea.innerHTML}
-                <script>
-                    window.onload = function() {
-                        window.print();
-                        setTimeout(function() { window.close(); }, 500);
-                    };
-                <\/script>
-            </body>
+        <!DOCTYPE html>
+        <html lang="th">
+        <head>
+            <meta charset="UTF-8">
+            <title>พิมพ์สำเนาคะแนน (ปพ.5)</title>
+            <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+            <style>
+                @page { size: A4 portrait; margin: 10mm; }
+                body { font-family: 'Sarabun', sans-serif; margin: 0; padding: 0; background: white; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                .room-page { page-break-after: always; }
+                .room-page:last-child { page-break-after: avoid; }
+                table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 10px; }
+                th, td { border: 1px solid #000 !important; padding: 5px 6px; }
+                th { background-color: #f1f5f9 !important; font-weight: bold; }
+            </style>
+        </head>
+        <body>
+            ${printArea.innerHTML}
+            <script>
+                window.onload = function() {
+                    window.print();
+                    setTimeout(function() { window.close(); }, 500);
+                };
+            <\/script>
+        </body>
         </html>
     `);
     w.document.close();

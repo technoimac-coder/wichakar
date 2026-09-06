@@ -90,13 +90,9 @@ tr.hover\:bg-green-50\/50:hover td.sticky-col-1, tr.hover\:bg-green-50\/50:hover
     isolation: isolate;
 }
 
-/* Hide background table/gradingSection whenever print preview modal or any overlay modal is open */
-body:has(#printPreviewModal:not(.hidden)) #gradingSection,
-body:has(#myRemedialModal:not(.hidden)) #gradingSection,
-body:has(#forceChangePasswordModal:not(.hidden)) #gradingSection,
-body:has(#printPreviewModal:not(.hidden)) #viewGrading,
-body:has(#myRemedialModal:not(.hidden)) #viewGrading {
-    visibility: hidden !important;
+/* Ensure modals are on top of everything */
+.fixed.z-\[100\], .fixed.z-\[200\] {
+    z-index: 99999 !important;
 }
 
 /* Reset sticky positioning inside print modal preview container */
