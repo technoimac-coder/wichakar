@@ -2361,11 +2361,15 @@ function printScoreCopy() {
     `;
 
     document.getElementById("printArea").innerHTML = html;
+    const section = document.getElementById("gradingSection");
+    if (section) section.style.visibility = "hidden";
     document.getElementById("printPreviewModal").classList.remove("hidden");
 }
 
 function closePrintPreviewModal() {
     document.getElementById("printPreviewModal").classList.add("hidden");
+    const section = document.getElementById("gradingSection");
+    if (section) section.style.visibility = "visible";
 }
 
 function triggerBrowserPrint() {
