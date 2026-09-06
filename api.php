@@ -772,25 +772,80 @@ switch ($action) {
         echo json_encode(["success" => true, "message" => "ส่งสำเนาคะแนนและล็อกข้อมูลรายวิชาเรียบร้อยแล้ว"], JSON_UNESCAPED_UNICODE);
         break;
 
-    // 18. แอดมินดึงรายการส่งสำเนาคะแนนทั้งหมด
+    // 18. แอดมินดึงรายการส่งสำเนาคะแนนทั้งหมด (รวมภาระงานสอน, รายวิชาจิตอาสาประจำห้อง, และรายการที่มีการส่งสำเนาเข้ามา)
     case "adminGetSubmissions":
         $t = $input["term"] ?? "2";
         $y = $input["year"] ?? "2567";
         $p = $input["period"] ?? "ก่อนกลางภาค";
 
-        // ดึงภาระงานสอนทั้งหมด
+        // 1. ดึงภาระงานสอนทั้งหมดจากตาราง teaching_load
         $loadStmt = $pdo->prepare("SELECT teacher_name as teacher, subject_code as code, subject_name as name, class_level as level, room FROM teaching_load WHERE term = ? AND year = ? ORDER BY teacher_name ASC, subject_code ASC, CAST(room AS UNSIGNED) ASC");
         $loadStmt->execute([$t, $y]);
-        $loads = $loadStmt->fetchAll();
+        $loads = $loadStmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // ดึงสถานะการส่งทั้งหมด
+        // 2. เพิ่มรายการ "จิตอาสา (กิจกรรมเพื่อสังคมและสาธารณประโยชน์)" สำหรับครูที่ปรึกษาประจำห้องทุกห้อง
+        $advStmt = $pdo->query("SELECT name as teacher, advisor_room FROM teachers WHERE advisor_room IS NOT NULL AND advisor_room != ''");
+        $advTeachers = $advStmt->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($advTeachers as $ar) {
+            $advRoomsStr = trim($ar["advisor_room"] ?? "");
+            if (!empty($advRoomsStr)) {
+                $roomTokens = preg_split('/[,]+/', $advRoomsStr);
+                foreach ($roomTokens as $rt) {
+                    $rt = trim($rt);
+                    if (empty($rt)) continue;
+                    if (strpos($rt, '/') !== false) {
+                        list($advLvl, $advR) = explode('/', $rt);
+                        $advLvl = trim($advLvl);
+                        $advR = trim($advR);
+                    } else {
+                        $advLvl = "ม.1";
+                        $advR = $rt;
+                    }
+                    if (!empty($advLvl) && !empty($advR)) {
+                        $loads[] = [
+                            "teacher" => $ar["teacher"],
+                            "code" => "VOLUNTEER",
+                            "name" => "จิตอาสา (กิจกรรมเพื่อสังคมและสาธารณประโยชน์)",
+                            "level" => $advLvl,
+                            "room" => $advR
+                        ];
+                    }
+                }
+            }
+        }
+
+        // 3. ดึงสถานะการส่งทั้งหมดใน score_submissions
         $subStmt = $pdo->prepare("SELECT subject_code, room, status, submitted_at, approved_at, reject_reason, snapshot_grades FROM score_submissions WHERE term = ? AND year = ? AND period = ?");
         $subStmt->execute([$t, $y, $p]);
-        $subRows = $subStmt->fetchAll();
+        $subRows = $subStmt->fetchAll(PDO::FETCH_ASSOC);
 
         $subMap = [];
         foreach ($subRows as $sub) {
             $subMap[$sub["subject_code"] . "_" . $sub["room"]] = $sub;
+        }
+
+        // 4. เพิ่มรายการที่มีใน score_submissions แต่ยังไม่มีใน $loads (เช่น วิชาพิเศษหรือชุมนุม)
+        $existingKeys = [];
+        foreach ($loads as $ld) {
+            $existingKeys[$ld["code"] . "_" . $ld["room"]] = true;
+        }
+        foreach ($subRows as $sub) {
+            $k = $sub["subject_code"] . "_" . $sub["room"];
+            if (!isset($existingKeys[$k])) {
+                $snap = $sub["snapshot_grades"] ? json_decode($sub["snapshot_grades"], true) : null;
+                $subjName = $snap && isset($snap["subjectName"]) ? $snap["subjectName"] : ($sub["subject_code"] === "VOLUNTEER" ? "จิตอาสา (กิจกรรมเพื่อสังคมและสาธารณประโยชน์)" : $sub["subject_code"]);
+                $teacherName = $snap && isset($snap["teacherName"]) ? $snap["teacherName"] : "ไม่ระบุครูผู้สอน";
+                $classLevel = $snap && isset($snap["classLevel"]) ? $snap["classLevel"] : "";
+                
+                $loads[] = [
+                    "teacher" => $teacherName,
+                    "code" => $sub["subject_code"],
+                    "name" => $subjName,
+                    "level" => $classLevel,
+                    "room" => $sub["room"]
+                ];
+                $existingKeys[$k] = true;
+            }
         }
 
         $result = [];
