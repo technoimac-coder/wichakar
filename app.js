@@ -2235,9 +2235,16 @@ function printScoreCopy() {
     if (currentLoadedSubmission && currentLoadedSubmission.snapshot_grades && currentLoadedSubmission.snapshot_grades.headers) {
         headers = currentLoadedSubmission.snapshot_grades.headers;
     } else {
-        let key = 'headers_' + currentTerm + '_' + currentYear + '_' + currentPeriod + '_' + subjData.subjectCode + '_' + targetRoom;
-        let stored = localStorage.getItem(key);
-        if (stored) headers = JSON.parse(stored);
+        let domInputs = document.querySelectorAll('#tableHeader input');
+        let domHeaders = [];
+        domInputs.forEach(inp => domHeaders.push(inp.value ? inp.value.trim() : ""));
+        if (domHeaders.some(h => h !== "")) {
+            headers = domHeaders;
+        } else {
+            let key = 'headers_' + currentTerm + '_' + currentYear + '_' + currentPeriod + '_' + subjData.subjectCode + '_' + targetRoom;
+            let stored = localStorage.getItem(key);
+            if (stored) headers = JSON.parse(stored);
+        }
     }
 
     // กรองหาคอลัมน์ที่ใช้งาน
@@ -2280,20 +2287,20 @@ function printScoreCopy() {
         students.push(sData);
     });
 
-    // 3. ประกอบโครงสร้างเอกสารพิมพ์
+    // 3. ประกอบโครงสร้างเอกสารพิมพ์ (ปรับขนาดให้กระชับ เพื่อให้อยู่ในกระดาษ A4 หน้าเดียว)
     let titleStr = "แบบบันทึกสำเนาคะแนนเก็บนักเรียน (สำเนา ปพ.5)";
     if (subjData.subjectCode === "CLUB") titleStr = "แบบบันทึกผลการประเมินกิจกรรมชุมนุม";
     else if (subjData.subjectCode === "ACT99") titleStr = "แบบบันทึกผลกิจกรรมพัฒนาผู้เรียน";
 
     let html = `
-        <div style="font-family: 'Sarabun', sans-serif; padding: 10px;">
-            <div style="text-align: center; margin-bottom: 25px;">
-                <h2 style="font-size: 20px; font-weight: bold; margin: 0; color: #000;">${titleStr}</h2>
-                <h3 style="font-size: 16px; font-weight: bold; margin: 5px 0 0 0;">โรงเรียนมกุฎเมืองราชวิทยาลัย</h3>
-                <p style="font-size: 14px; margin: 5px 0 15px 0;">
-                    <b>ภาคเรียนที่:</b> ${currentTerm} <b>ปีการศึกษา:</b> ${currentYear} <b>ช่วงเวลา:</b> ${currentPeriod}
+        <div style="font-family: 'Sarabun', sans-serif; padding: 4px; font-size: 11px; color: #000; line-height: 1.2;">
+            <div style="text-align: center; margin-bottom: 8px;">
+                <h2 style="font-size: 16px; font-weight: bold; margin: 0; color: #000;">${titleStr}</h2>
+                <h3 style="font-size: 13px; font-weight: bold; margin: 2px 0 0 0;">โรงเรียนมกุฎเมืองราชวิทยาลัย</h3>
+                <p style="font-size: 11px; margin: 2px 0 6px 0;">
+                    <b>ภาคเรียนที่:</b> ${currentTerm} &nbsp;|&nbsp; <b>ปีการศึกษา:</b> ${currentYear} &nbsp;|&nbsp; <b>ช่วงเวลา:</b> ${currentPeriod}
                 </p>
-                <div style="text-align: left; font-size: 13px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; border: 1px solid #cbd5e1; padding: 12px; border-radius: 8px; background-color: #f8fafc; margin-bottom: 20px;">
+                <div style="text-align: left; font-size: 11px; display: grid; grid-template-columns: 1fr 1fr; gap: 3px 12px; border: 1px solid #cbd5e1; padding: 6px 10px; border-radius: 6px; background-color: #f8fafc; margin-bottom: 6px;">
                     <div><b>รายวิชา:</b> ${subjData.subjectCode !== 'CLUB' ? subjData.subjectCode + ' ' : ''}${subjData.subjectName}</div>
                     <div><b>ชั้น/ห้อง:</b> ${subjData.subjectCode === 'CLUB' ? 'ทุกห้อง' : 'ม.' + clLevel + '/' + subjData.room}</div>
                     <div><b>ครูผู้สอน:</b> ${currentTeacherName}</div>
@@ -2303,14 +2310,14 @@ function printScoreCopy() {
                 </div>
             </div>
 
-            <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; font-size: 12px; text-align: center;">
+            <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; font-size: 11px; text-align: center;">
                 <thead>
                     <tr style="background-color: #f1f5f9; border-bottom: 1px solid #000;">
-                        <th style="border: 1px solid #000; width: 45px; padding: 6px; font-weight: bold;">เลขที่</th>
-                        <th style="border: 1px solid #000; width: 85px; padding: 6px; font-weight: bold;">เลขประจำตัว</th>
-                        <th style="border: 1px solid #000; text-align: left; padding: 6px 10px; font-weight: bold;">ชื่อ - นามสกุล</th>
-                        ${activeCols.map(col => `<th style="border: 1px solid #000; padding: 6px; font-weight: bold; min-width: 50px;">${col.name}</th>`).join('')}
-                        <th style="border: 1px solid #000; width: 90px; padding: 6px; font-weight: bold;">ผลการประเมิน</th>
+                        <th style="border: 1px solid #000; width: 35px; padding: 3px 2px; font-weight: bold;">เลขที่</th>
+                        <th style="border: 1px solid #000; width: 75px; padding: 3px 2px; font-weight: bold;">เลขประจำตัว</th>
+                        <th style="border: 1px solid #000; text-align: left; padding: 3px 6px; font-weight: bold;">ชื่อ - นามสกุล</th>
+                        ${activeCols.map(col => `<th style="border: 1px solid #000; padding: 3px 2px; font-weight: bold; min-width: 45px;">${col.name}</th>`).join('')}
+                        <th style="border: 1px solid #000; width: 80px; padding: 3px 2px; font-weight: bold;">ผลการประเมิน</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -2319,14 +2326,14 @@ function printScoreCopy() {
     students.forEach(st => {
         html += `
             <tr style="border-bottom: 1px solid #000;">
-                <td style="border: 1px solid #000; padding: 5px;">${st.no}</td>
-                <td style="border: 1px solid #000; padding: 5px; font-family: monospace;">${st.id}</td>
-                <td style="border: 1px solid #000; padding: 5px 10px; text-align: left; white-space: nowrap;">${st.name}</td>
+                <td style="border: 1px solid #000; padding: 2px 3px;">${st.no}</td>
+                <td style="border: 1px solid #000; padding: 2px 3px; font-family: monospace;">${st.id}</td>
+                <td style="border: 1px solid #000; padding: 2px 6px; text-align: left; white-space: nowrap;">${st.name}</td>
                 ${activeCols.map(col => {
                     let val = st['s' + col.index];
-                    return `<td style="border: 1px solid #000; padding: 5px;">${val !== undefined && val !== null ? val : ''}</td>`;
+                    return `<td style="border: 1px solid #000; padding: 2px 3px;">${val !== undefined && val !== null ? val : ''}</td>`;
                 }).join('')}
-                <td style="border: 1px solid #000; padding: 5px; font-weight: bold; color: red;">${(st.status === 'ซ' || (st.status && st.status !== 'ปกติ')) ? st.status : ''}</td>
+                <td style="border: 1px solid #000; padding: 2px 3px; font-weight: bold; color: red;">${(st.status === 'ซ' || (st.status && st.status !== 'ปกติ')) ? st.status : ''}</td>
             </tr>
         `;
     });
@@ -2335,25 +2342,23 @@ function printScoreCopy() {
                 </tbody>
             </table>
 
-            <div style="margin-top: 35px; page-break-inside: avoid; display: grid; grid-template-columns: 1fr 1fr; gap: 30px; font-size: 13px; text-align: center;">
-                <div style="padding: 10px;">
-                    ลงชื่อ.................................................................ครูผู้สอน<br>
+            <div style="margin-top: 14px; page-break-inside: avoid; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; font-size: 11px; text-align: center;">
+                <div style="padding: 2px;">
+                    ลงชื่อ..................................................ครูผู้สอน<br>
                     ( ${currentTeacherName} )<br>
-                    ตำแหน่ง.................................................................<br>
+                    ตำแหน่ง..................................................<br>
                     ......./......./.......
                 </div>
-                <div style="padding: 10px;">
-                    ลงชื่อ.................................................................หัวหน้ากลุ่มสาระการเรียนรู้<br>
-                    (...................................................................)<br>
-                    ตำแหน่ง.................................................................<br>
+                <div style="padding: 2px;">
+                    ลงชื่อ..................................................หัวหน้ากลุ่มสาระฯ<br>
+                    (..................................................)<br>
+                    ตำแหน่ง..................................................<br>
                     ......./......./.......
                 </div>
-            </div>
-            
-            <div style="margin-top: 25px; page-break-inside: avoid; text-align: center; font-size: 13px;">
-                <div style="display: inline-block; width: 320px; padding: 10px;">
-                    ลงชื่อ.................................................................หัวหน้างานวัดผล/วิชาการ<br>
-                    (...................................................................)<br>
+                <div style="padding: 2px;">
+                    ลงชื่อ..................................................หัวหน้างานวัดผล/วิชาการ<br>
+                    (..................................................)<br>
+                    ตำแหน่ง..................................................<br>
                     ......./......./.......
                 </div>
             </div>
@@ -2380,13 +2385,16 @@ function triggerBrowserPrint() {
             <title>พิมพ์สำเนาคะแนน (ปพ.5)</title>
             <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
             <style>
-                @page { size: A4 portrait; margin: 10mm; }
+                @page { size: A4 portrait; margin: 6mm 8mm; }
+                * { box-sizing: border-box; }
                 body { font-family: 'Sarabun', sans-serif; margin: 0; padding: 0; background: white; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                .room-page { page-break-after: always; }
-                .room-page:last-child { page-break-after: avoid; }
-                table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 10px; }
-                th, td { border: 1px solid #000 !important; padding: 5px 6px; }
+                table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 6px; }
+                th, td { border: 1px solid #000 !important; padding: 2px 4px; }
                 th { background-color: #f1f5f9 !important; font-weight: bold; }
+                @media print {
+                    body { padding: 0; }
+                    div { page-break-inside: avoid; }
+                }
             </style>
         </head>
         <body>
@@ -2410,7 +2418,7 @@ function downloadScoreCopyPDF() {
     const filename = `สำเนาคะแนน_${subjData.subjectCode}_ห้อง_${subjData.room}_เทอม_${currentTerm}-${currentYear}.pdf`;
     
     html2pdf().set({
-        margin: [0.5, 0.5, 0.5, 0.5],
+        margin: [0.25, 0.35, 0.25, 0.35],
         filename: filename,
         image: { type: 'jpeg', quality: 1.0 },
         html2canvas: { scale: 2, useCORS: true, logging: false },

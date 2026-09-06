@@ -811,7 +811,7 @@ tr.hover\:bg-green-50\/50:hover td.sticky-col-1, tr.hover\:bg-green-50\/50:hover
         </div>
         
         <div class="p-4 sm:p-6 overflow-y-auto flex-grow min-h-0 table-scrollbar bg-gray-100 flex justify-center">
-            <div id="printArea" class="bg-white p-6 sm:p-10 shadow-md w-full max-w-[210mm] min-h-[297mm] text-gray-800 box-border rounded-sm" style="font-family: 'Sarabun', sans-serif;">
+            <div id="printArea" class="bg-white p-4 sm:p-6 shadow-md w-full max-w-[210mm] min-h-[297mm] text-gray-800 box-border rounded-sm" style="font-family: 'Sarabun', sans-serif;">
                 <!-- รายละเอียดคะแนนสำหรับการพิมพ์จะแสดงตรงนี้ -->
             </div>
         </div>
