@@ -978,25 +978,78 @@ function renderMatrixTable(res){
     container.innerHTML = finalHtml;
     container.classList.remove('hidden');
     document.getElementById('pdfBtn').classList.remove('hidden');
+    if (document.getElementById('printMatrixBtn')) document.getElementById('printMatrixBtn').classList.remove('hidden');
+}
+
+function printMatrixReport() {
+    const matrixArea = document.getElementById("matrixPrintArea");
+    if (!matrixArea) return;
+    const term = document.getElementById('termSelect').value.replace('/','-');
+    const level = document.getElementById('levelSelect').value.replace(/\./g, '');
+    const roomStr = document.getElementById('roomSelect').value === 'all' ? 'รวม' : document.getElementById('roomSelect').value;
+    const period = document.getElementById('reportPeriodSelect').value;
+
+    const w = window.open('', '_blank');
+    w.document.write(`
+        <!DOCTYPE html>
+        <html lang="th">
+        <head>
+            <meta charset="UTF-8">
+            <title>รายงานผลการตรวจสำเนาคะแนน_${period}_เทอม_${term}_ชั้น${level}_ห้อง${roomStr}</title>
+            <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+            <style>
+                @page { size: A4 portrait; margin: 6mm 8mm; }
+                * { box-sizing: border-box; }
+                body { font-family: 'Sarabun', sans-serif; margin: 0; padding: 0; background: white; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                .room-page { page-break-after: always; width: 100%; box-sizing: border-box; padding-top: 5px; }
+                .room-page:last-child { page-break-after: avoid; }
+                table { width: 100%; border-collapse: collapse; border: 1px solid #000; font-size: 10px; text-align: center; }
+                th, td { border: 1px solid #000 !important; padding: 2px 3px; }
+                th { background-color: #f1f5f9 !important; font-weight: bold; }
+                @media print {
+                    body { padding: 0; margin: 0; }
+                    .room-page { page-break-after: always; }
+                    .room-page:last-child { page-break-after: avoid; }
+                }
+            </style>
+        </head>
+        <body>
+            ${matrixArea.innerHTML}
+            <script>
+                window.onload = function() {
+                    window.print();
+                    setTimeout(function() { window.close(); }, 500);
+                };
+            <\/script>
+        </body>
+        </html>
+    `);
+    w.document.close();
 }
 
 function exportPDF(){
-const element=document.getElementById('matrixPrintArea');
-const term=document.getElementById('termSelect').value.replace('/','-');
-const level=document.getElementById('levelSelect').value.replace(/\\./g, '');
-const roomStr=document.getElementById('roomSelect').value === 'all' ? 'รวม' : document.getElementById('roomSelect').value;
-const period=document.getElementById('reportPeriodSelect').value;
-const btn=document.getElementById('pdfBtn');const orig=btn.innerHTML;
-btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> สร้าง PDF...';btn.disabled=true;
+    const element = document.getElementById('matrixPrintArea');
+    const term = document.getElementById('termSelect').value.replace('/','-');
+    const level = document.getElementById('levelSelect').value.replace(/\./g, '');
+    const roomStr = document.getElementById('roomSelect').value === 'all' ? 'รวม' : document.getElementById('roomSelect').value;
+    const period = document.getElementById('reportPeriodSelect').value;
+    const btn = document.getElementById('pdfBtn');
+    const orig = btn.innerHTML;
 
-html2pdf().set({
-margin: [0.3, 0.3, 0.3, 0.3], 
-filename: `รายงานผล_${period}_เทอม_${term}_ชั้น${level}_ห้อง${roomStr}.pdf`,
-image: {type: 'jpeg', quality: 1.0},
-pagebreak: { mode: 'css', avoid: ['tr', 'thead'] }, 
-html2canvas: { scale: 2, useCORS: true, logging: false, scrollY: 0, windowY: 0 },
-jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
-}).from(element).save().then(()=>{btn.innerHTML=orig;btn.disabled=false;});
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> สร้าง PDF...';
+    btn.disabled = true;
+
+    html2pdf().set({
+        margin: [0.25, 0.3, 0.25, 0.3], 
+        filename: `รายงานผล_${period}_เทอม_${term}_ชั้น${level}_ห้อง${roomStr}.pdf`,
+        image: { type: 'jpeg', quality: 1.0 },
+        pagebreak: { mode: 'css', avoid: ['tr', 'thead', '.room-page'] }, 
+        html2canvas: { scale: 3, useCORS: true, logging: false, scrollY: 0, windowY: 0, letterRendering: true },
+        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+    }).from(element).save().then(() => {
+        btn.innerHTML = orig;
+        btn.disabled = false;
+    });
 }
 
 function updateUploadInstructions() {

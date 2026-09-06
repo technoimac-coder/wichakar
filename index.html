@@ -414,7 +414,10 @@ tr.hover\:bg-green-50\/50:hover td.sticky-col-1, tr.hover\:bg-green-50\/50:hover
 <button onclick="loadMatrixReport()" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition flex items-center gap-2 shadow-md">
 <i class="fa-solid fa-search"></i> แสดงตาราง
 </button>
-<div class="flex-grow text-right">
+<div class="flex-grow text-right flex justify-end gap-2">
+<button id="printMatrixBtn" onclick="printMatrixReport()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition hidden inline-flex items-center gap-2 shadow-md">
+<i class="fa-solid fa-print"></i> พิมพ์รายงาน (Print)
+</button>
 <button id="pdfBtn" onclick="exportPDF()" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition hidden inline-flex items-center gap-2 shadow-md">
 <i class="fa-solid fa-file-pdf"></i> ดาวน์โหลด PDF
 </button>
