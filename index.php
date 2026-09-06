@@ -211,8 +211,8 @@ tr.hover\:bg-blue-50\/50:hover td.sticky-col-1, tr.hover\:bg-blue-50\/50:hover t
                 <label class="block text-xs font-bold text-gray-700 mb-1">รหัสผ่านใหม่ (อย่างน้อย 6 ตัวอักษร)</label>
                 <div class="relative">
                     <input type="password" id="newTeacherPassword" class="w-full border border-gray-300 rounded-lg p-2.5 pr-10 outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="••••••••">
-                    <button type="button" onclick="toggleInputVisibility('newTeacherPassword', 'newPassEye')" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-600 p-1">
-                        <i id="newPassEye" class="fa-solid fa-eye text-xs"></i>
+                    <button type="button" onclick="toggleInputVisibility('newTeacherPassword', 'newPassEye')" class="absolute right-2.5 inset-y-0 my-auto flex items-center justify-center text-gray-400 hover:text-blue-600 p-1 z-10">
+                        <span id="newPassEye" class="flex items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-gray-400 inline-block"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12c1.274 4.057 5.064 7 9.542 7 4.477 0 8.268-2.943 9.542-7-1.274-4.057-5.064-7-9.542-7-4.477 0-8.268 2.943-9.542 7z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg></span>
                     </button>
                 </div>
             </div>
@@ -220,8 +220,8 @@ tr.hover\:bg-blue-50\/50:hover td.sticky-col-1, tr.hover\:bg-blue-50\/50:hover t
                 <label class="block text-xs font-bold text-gray-700 mb-1">ยืนยันรหัสผ่านใหม่อีกครั้ง</label>
                 <div class="relative">
                     <input type="password" id="confirmTeacherPassword" class="w-full border border-gray-300 rounded-lg p-2.5 pr-10 outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="••••••••">
-                    <button type="button" onclick="toggleInputVisibility('confirmTeacherPassword', 'confPassEye')" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-600 p-1">
-                        <i id="confPassEye" class="fa-solid fa-eye text-xs"></i>
+                    <button type="button" onclick="toggleInputVisibility('confirmTeacherPassword', 'confPassEye')" class="absolute right-2.5 inset-y-0 my-auto flex items-center justify-center text-gray-400 hover:text-blue-600 p-1 z-10">
+                        <span id="confPassEye" class="flex items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-gray-400 inline-block"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12c1.274 4.057 5.064 7 9.542 7 4.477 0 8.268-2.943 9.542-7-1.274-4.057-5.064-7-9.542-7-4.477 0-8.268 2.943-9.542 7z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg></span>
                     </button>
                 </div>
             </div>
@@ -270,8 +270,8 @@ tr.hover\:bg-blue-50\/50:hover td.sticky-col-1, tr.hover\:bg-blue-50\/50:hover t
 <label class="block text-sm font-semibold text-gray-700 mb-1">รหัสผ่าน (Password)</label>
 <div class="relative">
     <input type="password" id="teacherPin" onkeypress="if(event.key==='Enter') handleLogin()" class="block w-full px-3 py-2.5 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm" placeholder="••••••••">
-    <button type="button" onclick="togglePasswordVisibility()" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-600 transition p-1">
-        <i id="passwordEyeIcon" class="fa-solid fa-eye text-sm"></i>
+    <button type="button" onclick="togglePasswordVisibility()" class="absolute right-2.5 inset-y-0 my-auto flex items-center justify-center text-gray-400 hover:text-blue-600 transition p-1 z-10">
+        <span id="passwordEyeIcon" class="flex items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-gray-400 inline-block"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12c1.274 4.057 5.064 7 9.542 7 4.477 0 8.268-2.943 9.542-7-1.274-4.057-5.064-7-9.542-7-4.477 0-8.268 2.943-9.542 7z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg></span>
     </button>
 </div>
 <p class="text-xs text-red-500 font-semibold mt-1.5 flex items-center gap-1.5">
