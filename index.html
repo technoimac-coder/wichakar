@@ -224,12 +224,12 @@ tr.hover\:bg-blue-50\/50:hover td.sticky-col-1, tr.hover\:bg-blue-50\/50:hover t
 <div class="space-y-5">
 <div>
 <label class="block text-sm font-semibold text-gray-700 mb-1">รหัสประจำตัว (Username)</label>
-<input type="text" id="teacherId" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="เช่น 1509900...">
+<input type="text" id="teacherId" onkeypress="if(event.key==='Enter') document.getElementById('teacherPin').focus()" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="เช่น 1509900...">
 </div>
 <div>
 <label class="block text-sm font-semibold text-gray-700 mb-1">รหัสผ่าน (Password)</label>
 <div class="relative">
-    <input type="password" id="teacherPin" class="block w-full px-3 py-2.5 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm" placeholder="••••••••">
+    <input type="password" id="teacherPin" onkeypress="if(event.key==='Enter') handleLogin()" class="block w-full px-3 py-2.5 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm" placeholder="••••••••">
     <button type="button" onclick="togglePasswordVisibility()" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-600 transition p-1">
         <i id="passwordEyeIcon" class="fa-solid fa-eye text-sm"></i>
     </button>
@@ -241,7 +241,7 @@ tr.hover\:bg-blue-50\/50:hover td.sticky-col-1, tr.hover\:bg-blue-50\/50:hover t
 <div id="loginError" class="hidden bg-red-50 text-red-600 text-sm p-3 rounded-lg border border-red-200">
 <i class="fa-solid fa-circle-exclamation mr-1"></i> <span id="loginErrorText">รหัสไม่ถูกต้อง!</span>
 </div>
-<button id="loginBtn" class="w-full bg-blue-600 text-white font-bold py-2.5 px-4 rounded-lg hover:bg-blue-700 transition shadow-md">
+<button id="loginBtn" onclick="handleLogin()" class="w-full bg-blue-600 text-white font-bold py-2.5 px-4 rounded-lg hover:bg-blue-700 transition shadow-md">
 เข้าสู่ระบบ <i class="fa-solid fa-arrow-right-to-bracket ml-1"></i>
 </button>
 </div>
