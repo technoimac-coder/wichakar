@@ -445,20 +445,62 @@ tr.hover\:bg-green-50\/50:hover td.sticky-col-1, tr.hover\:bg-green-50\/50:hover
             </span>
         </div>
 
-        <div class="flex flex-wrap items-end gap-4 mb-6 bg-gray-50 p-4 rounded-xl border border-gray-100">
+        <div class="flex flex-wrap items-end gap-3 mb-6 bg-gray-50 p-4 rounded-xl border border-gray-100">
             <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-1">ภาคเรียน/ปีการศึกษา:</label>
-                <select id="approveTermSelect" class="border border-gray-300 rounded-lg p-2 outline-none min-w-[140px] bg-white text-sm"></select>
+                <label class="block text-xs font-bold text-gray-700 mb-1">ภาคเรียน/ปีการศึกษา:</label>
+                <select id="approveTermSelect" class="border border-gray-300 rounded-lg p-2 outline-none min-w-[130px] bg-white text-sm"></select>
             </div>
             <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-1">ช่วงเวลา:</label>
-                <select id="approvePeriodSelect" class="border border-gray-300 rounded-lg p-2 outline-none min-w-[140px] bg-white text-sm">
+                <label class="block text-xs font-bold text-gray-700 mb-1">ช่วงเวลา:</label>
+                <select id="approvePeriodSelect" class="border border-gray-300 rounded-lg p-2 outline-none min-w-[120px] bg-white text-sm">
                     <option value="ก่อนกลางภาค">ก่อนกลางภาค</option>
                     <option value="หลังกลางภาค">หลังกลางภาค</option>
                 </select>
             </div>
-            <button onclick="loadSubmissionTracker()" class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition flex items-center gap-2 shadow-md font-bold text-sm">
-                <i class="fa-solid fa-rotate"></i> โหลดข้อมูล/รีเฟรช
+            <div>
+                <label class="block text-xs font-bold text-gray-700 mb-1">ระดับชั้น:</label>
+                <select id="approveLevelSelect" onchange="filterApproveSubmissions()" class="border border-gray-300 rounded-lg p-2 outline-none min-w-[100px] bg-white text-sm">
+                    <option value="ALL">ทุกชั้น</option>
+                    <option value="1">ม.1</option>
+                    <option value="2">ม.2</option>
+                    <option value="3">ม.3</option>
+                    <option value="4">ม.4</option>
+                    <option value="5">ม.5</option>
+                    <option value="6">ม.6</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-700 mb-1">ห้อง:</label>
+                <select id="approveRoomSelect" onchange="filterApproveSubmissions()" class="border border-gray-300 rounded-lg p-2 outline-none min-w-[90px] bg-white text-sm">
+                    <option value="ALL">ทุกห้อง</option>
+                    <option value="1">ห้อง 1</option>
+                    <option value="2">ห้อง 2</option>
+                    <option value="3">ห้อง 3</option>
+                    <option value="4">ห้อง 4</option>
+                    <option value="5">ห้อง 5</option>
+                    <option value="6">ห้อง 6</option>
+                    <option value="7">ห้อง 7</option>
+                    <option value="8">ห้อง 8</option>
+                    <option value="9">ห้อง 9</option>
+                    <option value="10">ห้อง 10</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-700 mb-1">สถานะ:</label>
+                <select id="approveStatusSelect" onchange="filterApproveSubmissions()" class="border border-gray-300 rounded-lg p-2 outline-none min-w-[110px] bg-white text-sm">
+                    <option value="ALL">ทุกสถานะ</option>
+                    <option value="Submitted">รออนุมัติ</option>
+                    <option value="Approved">อนุมัติแล้ว</option>
+                    <option value="Rejected">ตีกลับแก้ไข</option>
+                    <option value="Draft">แบบร่าง (ยังไม่ส่ง)</option>
+                </select>
+            </div>
+            <div class="flex-grow min-w-[150px]">
+                <label class="block text-xs font-bold text-gray-700 mb-1">ค้นหา (รหัส/ชื่อวิชา/ครู):</label>
+                <input type="text" id="approveSearchInput" onkeyup="filterApproveSubmissions()" placeholder="พิมพ์ข้อความค้นหา..." class="w-full border border-gray-300 rounded-lg p-2 outline-none bg-white text-sm">
+            </div>
+            <button onclick="loadSubmissionTracker()" class="bg-indigo-600 text-white px-5 py-2 rounded-lg hover:bg-indigo-700 transition flex items-center gap-2 shadow-md font-bold text-sm h-[38px]">
+                <i class="fa-solid fa-rotate"></i> รีเฟรช
             </button>
         </div>
 

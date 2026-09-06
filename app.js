@@ -2430,6 +2430,8 @@ function downloadScoreCopyPDF() {
 // ==========================================
 // ส่วนเพิ่มเติม: ระบบตรวจสอบและอนุมัติสำหรับวิชาการ
 // ==========================================
+window.currentApproveSubmissionsList = [];
+
 function loadSubmissionTracker() {
     const termVal = document.getElementById("approveTermSelect").value;
     const period = document.getElementById("approvePeriodSelect").value;
@@ -2448,66 +2450,127 @@ function loadSubmissionTracker() {
     google.script.run.withSuccessHandler(function(res) {
         loader.classList.add("hidden");
         if (res.success) {
-            const list = res.submissions;
-            if (list.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" class="p-8 text-center text-gray-500">ไม่มีรายวิชาใดส่งสำเนาคะแนนเข้ามาในภาคเรียนนี้</td></tr>`;
-                return;
-            }
-
-            list.forEach((sub, index) => {
-                let statusBadge = "";
-                if (sub.status === "Submitted") {
-                    statusBadge = `<span class="bg-orange-100 text-orange-700 px-2.5 py-1 rounded-full text-xs font-bold border border-orange-200">รออนุมัติ</span>`;
-                } else if (sub.status === "Approved") {
-                    statusBadge = `<span class="bg-green-100 text-green-700 px-2.5 py-1 rounded-full text-xs font-bold border border-green-200">อนุมัติแล้ว</span>`;
-                } else if (sub.status === "Rejected") {
-                    statusBadge = `<span class="bg-red-100 text-red-700 px-2.5 py-1 rounded-full text-xs font-bold border border-red-200" title="เหตุผล: ${sub.rejectReason || ''}">ตีกลับแก้ไข</span>`;
-                }
-
-                let clLevel = sub.classLevel ? sub.classLevel.toString().replace(/[ม\\.]/g, '').trim() : '';
-                let roomStr = sub.subjectCode === "CLUB" ? "รวม" : "ม." + clLevel + "/" + sub.room;
-
-                let actionHtml = "";
-                if (sub.status === "Submitted") {
-                    actionHtml = `
-                        <div class="flex gap-2 justify-center">
-                            <button onclick="adminApproveSubmission('${sub.subjectCode}', '${sub.room}')" class="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded font-bold text-xs transition shadow-sm">
-                                อนุมัติ
-                            </button>
-                            <button onclick="adminRejectSubmission('${sub.subjectCode}', '${sub.room}')" class="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded font-bold text-xs transition shadow-sm">
-                                ตีกลับ
-                            </button>
-                        </div>
-                    `;
-                } else if (sub.status === "Approved") {
-                    actionHtml = `
-                        <div class="flex gap-2 justify-center">
-                            <button onclick="adminRejectSubmission('${sub.subjectCode}', '${sub.room}', true)" class="px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded font-bold text-xs transition shadow-sm">
-                                ปลดล็อก/ตีกลับ
-                            </button>
-                        </div>
-                    `;
-                } else {
-                    actionHtml = `<span class="text-xs text-gray-400 font-medium">รอครูแก้ไข</span>`;
-                }
-
-                tbody.innerHTML += `
-                    <tr class="hover:bg-gray-50/50">
-                        <td class="p-3 text-center text-gray-500 font-mono">${index + 1}</td>
-                        <td class="p-3 font-bold font-mono text-gray-700">${sub.subjectCode}</td>
-                        <td class="p-3 font-medium text-gray-800">${sub.subjectName}</td>
-                        <td class="p-3 text-center font-semibold text-gray-600">${roomStr}</td>
-                        <td class="p-3 text-gray-600">${sub.teacher}</td>
-                        <td class="p-3 text-center text-xs text-gray-500 font-mono">${sub.submittedAt || '-'}</td>
-                        <td class="p-3 text-center">${statusBadge}</td>
-                        <td class="p-3 text-center">${actionHtml}</td>
-                    </tr>
-                `;
-            });
+            window.currentApproveSubmissionsList = res.submissions || [];
+            filterApproveSubmissions();
         } else {
             tbody.innerHTML = `<tr><td colspan="8" class="p-8 text-center text-red-500 font-bold">เกิดข้อผิดพลาด: ${res.message}</td></tr>`;
         }
     }).adminGetSubmissions(term, year, period);
+}
+
+function filterApproveSubmissions() {
+    if (!window.currentApproveSubmissionsList) return;
+
+    const levelSelect = document.getElementById("approveLevelSelect");
+    const roomSelect = document.getElementById("approveRoomSelect");
+    const statusSelect = document.getElementById("approveStatusSelect");
+    const searchInput = document.getElementById("approveSearchInput");
+
+    const levelVal = levelSelect ? levelSelect.value : "ALL";
+    const roomVal = roomSelect ? roomSelect.value : "ALL";
+    const statusVal = statusSelect ? statusSelect.value : "ALL";
+    const searchVal = searchInput ? searchInput.value.trim().toLowerCase() : "";
+
+    let filtered = window.currentApproveSubmissionsList.filter(sub => {
+        // กรองระดับชั้น
+        if (levelVal !== "ALL") {
+            let clLevel = sub.classLevel ? sub.classLevel.toString().replace(/[ม\\.]/g, '').trim() : '';
+            let targetLevel = levelVal.replace(/[ม\\.]/g, '').trim();
+            if (clLevel !== targetLevel) return false;
+        }
+
+        // กรองห้อง
+        if (roomVal !== "ALL") {
+            let rStr = sub.room ? sub.room.toString().trim() : '';
+            if (rStr !== roomVal.toString().trim()) return false;
+        }
+
+        // กรองสถานะ
+        if (statusVal !== "ALL") {
+            if (sub.status !== statusVal) return false;
+        }
+
+        // ค้นหาข้อความ (รหัสวิชา, ชื่อวิชา, ครูผู้สอน, ห้อง)
+        if (searchVal !== "") {
+            let code = (sub.subjectCode || "").toLowerCase();
+            let name = (sub.subjectName || "").toLowerCase();
+            let teacher = (sub.teacher || "").toLowerCase();
+            let roomText = ("ม." + (sub.classLevel || "") + "/" + (sub.room || "")).toLowerCase();
+            if (!code.includes(searchVal) && !name.includes(searchVal) && !teacher.includes(searchVal) && !roomText.includes(searchVal)) {
+                return false;
+            }
+        }
+
+        return true;
+    });
+
+    renderApproveSubmissionsTable(filtered);
+}
+
+function renderApproveSubmissionsTable(list) {
+    const tbody = document.getElementById("approveTableBody");
+    if (!tbody) return;
+
+    if (!list || list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="p-8 text-center text-gray-500 font-medium">ไม่พบรายการสำเนาคะแนนตามเงื่อนไขที่เลือก (ระดับชั้น/ห้อง/สถานะ)</td></tr>`;
+        return;
+    }
+
+    let html = '';
+    list.forEach((sub, index) => {
+        let statusBadge = "";
+        if (sub.status === "Submitted") {
+            statusBadge = `<span class="bg-orange-100 text-orange-700 px-2.5 py-1 rounded-full text-xs font-bold border border-orange-200">รออนุมัติ</span>`;
+        } else if (sub.status === "Approved") {
+            statusBadge = `<span class="bg-green-100 text-green-700 px-2.5 py-1 rounded-full text-xs font-bold border border-green-200">อนุมัติแล้ว</span>`;
+        } else if (sub.status === "Rejected") {
+            statusBadge = `<span class="bg-red-100 text-red-700 px-2.5 py-1 rounded-full text-xs font-bold border border-red-200" title="เหตุผล: ${sub.rejectReason || ''}">ตีกลับแก้ไข</span>`;
+        } else {
+            statusBadge = `<span class="bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full text-xs font-bold border border-gray-200">แบบร่าง</span>`;
+        }
+
+        let clLevel = sub.classLevel ? sub.classLevel.toString().replace(/[ม\\.]/g, '').trim() : '';
+        let roomStr = sub.subjectCode === "CLUB" ? "รวม" : "ม." + clLevel + "/" + sub.room;
+
+        let actionHtml = "";
+        if (sub.status === "Submitted") {
+            actionHtml = `
+                <div class="flex gap-2 justify-center">
+                    <button onclick="adminApproveSubmission('${sub.subjectCode}', '${sub.room}')" class="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded font-bold text-xs transition shadow-sm">
+                        อนุมัติ
+                    </button>
+                    <button onclick="adminRejectSubmission('${sub.subjectCode}', '${sub.room}')" class="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded font-bold text-xs transition shadow-sm">
+                        ตีกลับ
+                    </button>
+                </div>
+            `;
+        } else if (sub.status === "Approved") {
+            actionHtml = `
+                <div class="flex gap-2 justify-center">
+                    <button onclick="adminRejectSubmission('${sub.subjectCode}', '${sub.room}', true)" class="px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded font-bold text-xs transition shadow-sm">
+                        ปลดล็อก/ตีกลับ
+                    </button>
+                </div>
+            `;
+        } else {
+            actionHtml = `<span class="text-xs text-gray-400 font-medium">รอครูแก้ไข</span>`;
+        }
+
+        html += `
+            <tr class="hover:bg-gray-50/50">
+                <td class="p-3 text-center text-gray-500 font-mono">${index + 1}</td>
+                <td class="p-3 font-bold font-mono text-gray-700">${sub.subjectCode}</td>
+                <td class="p-3 font-medium text-gray-800">${sub.subjectName}</td>
+                <td class="p-3 text-center font-semibold text-gray-600">${roomStr}</td>
+                <td class="p-3 text-gray-600">${sub.teacher}</td>
+                <td class="p-3 text-center text-xs text-gray-500 font-mono">${sub.submittedAt || '-'}</td>
+                <td class="p-3 text-center">${statusBadge}</td>
+                <td class="p-3 text-center">${actionHtml}</td>
+            </tr>
+        `;
+    });
+
+    tbody.innerHTML = html;
 }
 
 function adminApproveSubmission(subjectCode, room) {
