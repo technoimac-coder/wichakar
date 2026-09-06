@@ -641,8 +641,8 @@ if(students.length===0){
         if (subjData.subjectCode === "CLUB") {
             let makeSelect = (val) => `
                 <select class="w-full border border-gray-300 rounded-md p-2 text-center outline-none focus:border-blue-500 transition-colors status-select ${val==='ซ'?'bg-red-50 text-red-600 font-bold':'text-gray-500'}" onchange="updateActStyle(this)">
-                    <option value="" ${!val?'selected':''}>- ปกติ -</option>
-                    <option value="ซ" class="text-red-600 font-bold" ${val==='ซ'?'selected':''}>ช</option>
+                    <option value="" ${!val || val==='ปกติ'?'selected':''}></option>
+                    <option value="ซ" class="text-red-600 font-bold" ${val==='ซ'?'selected':''}>ซ</option>
                 </select>
             `;
             tbody.innerHTML+=`
@@ -660,8 +660,8 @@ if(students.length===0){
         } else if(subjData.subjectCode === "ACT99") {
             let makeSelect = (val, cls) => `
                 <select class="w-full border border-gray-300 rounded-md p-2 text-center outline-none focus:border-blue-500 transition-colors ${cls} ${val==='ซ'?'bg-red-50 text-red-600 font-bold':'text-gray-500'}" onchange="updateActStyle(this)">
-                    <option value="" ${!val?'selected':''}>- ปกติ -</option>
-                    <option value="ซ" class="text-red-600 font-bold" ${val==='ซ'?'selected':''}>ช</option>
+                    <option value="" ${!val || val==='ปกติ'?'selected':''}></option>
+                    <option value="ซ" class="text-red-600 font-bold" ${val==='ซ'?'selected':''}>ซ</option>
                 </select>
             `;
             
@@ -693,8 +693,8 @@ if(students.length===0){
             </tr>`;
         } else {
             let statSelect=`<select class="w-full border rounded p-1 text-center status-select ${student.status!=='ปกติ'&&student.status?'bg-red-50 text-red-600 font-bold':''}" onchange="updateStyle(this)">
-            <option value="ปกติ" ${student.status==='ปกติ'||!student.status?'selected':''}>ปกติ</option>
-            <option value="ซ" class="text-red-500 font-bold" ${student.status==='ซ'?'selected':''}>ช</option>
+            <option value="ปกติ" ${student.status==='ปกติ'||!student.status?'selected':''}></option>
+            <option value="ซ" class="text-red-500 font-bold" ${student.status==='ซ'?'selected':''}>ซ</option>
             <option value="0" class="text-red-500 font-bold" ${student.status==='0'?'selected':''}>0</option>
             <option value="ร" class="text-orange-500 font-bold" ${student.status==='ร'?'selected':''}>ร</option>
             <option value="มส." class="text-red-500" ${student.status==='มส.'?'selected':''}>มส.</option>
