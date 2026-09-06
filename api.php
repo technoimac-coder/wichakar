@@ -783,9 +783,11 @@ switch ($action) {
         $loadStmt->execute([$t, $y]);
         $loads = $loadStmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // 2. เพิ่มรายการ "จิตอาสา (กิจกรรมเพื่อสังคมและสาธารณประโยชน์)" สำหรับครูที่ปรึกษาประจำห้องทุกห้อง
+        // 2. เพิ่มรายการ "จิตอาสา (กิจกรรมเพื่อสังคมและสาธารณประโยชน์)" สำหรับครูที่ปรึกษาประจำห้องทุกห้อง (รวมชื่อครูที่ปรึกษาทุกคนในห้องเดียวกันให้อยู่ในแถวเดียว)
         $advStmt = $pdo->query("SELECT name as teacher, advisor_room FROM teachers WHERE advisor_room IS NOT NULL AND advisor_room != ''");
         $advTeachers = $advStmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        $volRoomsMap = [];
         foreach ($advTeachers as $ar) {
             $advRoomsStr = trim($ar["advisor_room"] ?? "");
             if (!empty($advRoomsStr)) {
@@ -801,17 +803,34 @@ switch ($action) {
                         $advLvl = "ม.1";
                         $advR = $rt;
                     }
-                    if (!empty($advLvl) && !empty($advR)) {
-                        $loads[] = [
-                            "teacher" => $ar["teacher"],
-                            "code" => "VOLUNTEER",
-                            "name" => "จิตอาสา (กิจกรรมเพื่อสังคมและสาธารณประโยชน์)",
-                            "level" => $advLvl,
-                            "room" => $advR
-                        ];
+                    $cleanLvl = preg_replace('/[ม\\.]/', '', $advLvl);
+                    $cleanR = trim($advR);
+
+                    if (!empty($cleanLvl) && !empty($cleanR)) {
+                        $vrKey = $cleanLvl . "_" . $cleanR;
+                        if (!isset($volRoomsMap[$vrKey])) {
+                            $volRoomsMap[$vrKey] = [
+                                "level" => $cleanLvl,
+                                "room" => $cleanR,
+                                "teachers" => []
+                            ];
+                        }
+                        if (!in_array($ar["teacher"], $volRoomsMap[$vrKey]["teachers"])) {
+                            $volRoomsMap[$vrKey]["teachers"][] = $ar["teacher"];
+                        }
                     }
                 }
             }
+        }
+
+        foreach ($volRoomsMap as $vrData) {
+            $loads[] = [
+                "teacher" => implode(", ", $vrData["teachers"]),
+                "code" => "VOLUNTEER",
+                "name" => "จิตอาสา (กิจกรรมเพื่อสังคมและสาธารณประโยชน์)",
+                "level" => $vrData["level"],
+                "room" => $vrData["room"]
+            ];
         }
 
         // 3. ดึงสถานะการส่งทั้งหมดใน score_submissions
