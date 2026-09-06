@@ -2326,7 +2326,7 @@ function printScoreCopy() {
                     let val = st['s' + col.index];
                     return `<td style="border: 1px solid #000; padding: 5px;">${val !== undefined && val !== null ? val : ''}</td>`;
                 }).join('')}
-                <td style="border: 1px solid #000; padding: 5px; font-weight: bold; ${st.status !== 'ปกติ' && st.status ? 'color: red;' : ''}">${st.status || 'ปกติ'}</td>
+                <td style="border: 1px solid #000; padding: 5px; font-weight: bold; color: red;">${(st.status === 'ซ' || (st.status && st.status !== 'ปกติ')) ? st.status : ''}</td>
             </tr>
         `;
     });

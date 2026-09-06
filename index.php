@@ -202,9 +202,9 @@ tr.hover\:bg-green-50\/50:hover td.sticky-col-1, tr.hover\:bg-green-50\/50:hover
 </div>
 
 <!-- Modal พิมพ์สำเนาคะแนน -->
-<div id="printPreviewModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-[100] hidden flex items-center justify-center p-4 transition-opacity">
-    <div class="bg-white rounded-2xl w-full max-w-5xl max-h-[95vh] shadow-2xl flex flex-col fade-in overflow-hidden">
-        <div class="bg-gradient-to-r from-blue-700 to-indigo-800 text-white px-6 py-4 flex justify-between items-center">
+<div id="printPreviewModal" class="fixed inset-0 bg-gray-900 bg-opacity-60 z-[99999] hidden flex items-center justify-center p-2 sm:p-4 transition-opacity overflow-y-auto">
+    <div class="bg-white rounded-2xl w-full max-w-5xl max-h-[90vh] my-auto shadow-2xl flex flex-col fade-in overflow-hidden">
+        <div class="bg-gradient-to-r from-blue-700 to-indigo-800 text-white px-6 py-4 flex justify-between items-center shrink-0">
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-xl">
                     <i class="fa-solid fa-print"></i>
@@ -219,13 +219,13 @@ tr.hover\:bg-green-50\/50:hover td.sticky-col-1, tr.hover\:bg-green-50\/50:hover
             </button>
         </div>
         
-        <div class="p-6 overflow-y-auto flex-grow table-scrollbar bg-gray-100">
-            <div id="printArea" class="bg-white p-8 shadow-md mx-auto max-w-[210mm] min-h-[297mm] text-gray-800" style="font-family: 'Sarabun', sans-serif;">
+        <div class="p-4 sm:p-6 overflow-y-auto flex-grow min-h-0 table-scrollbar bg-gray-100 flex justify-center">
+            <div id="printArea" class="bg-white p-6 sm:p-10 shadow-md w-full max-w-[210mm] min-h-[297mm] text-gray-800 box-border rounded-sm" style="font-family: 'Sarabun', sans-serif;">
                 <!-- รายละเอียดคะแนนสำหรับการพิมพ์จะแสดงตรงนี้ -->
             </div>
         </div>
 
-        <div class="p-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3">
+        <div class="p-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3 shrink-0">
             <button onclick="downloadScoreCopyPDF()" class="px-5 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-bold transition text-sm flex items-center gap-2 shadow-sm">
                 <i class="fa-solid fa-file-pdf"></i> ดาวน์โหลด PDF
             </button>
