@@ -981,75 +981,166 @@ function renderMatrixTable(res){
     if (document.getElementById('printMatrixBtn')) document.getElementById('printMatrixBtn').classList.remove('hidden');
 }
 
-function printMatrixReport() {
-    const matrixArea = document.getElementById("matrixPrintArea");
-    if (!matrixArea) return;
-    const term = document.getElementById('termSelect').value.replace('/','-');
-    const level = document.getElementById('levelSelect').value.replace(/\./g, '');
-    const roomStr = document.getElementById('roomSelect').value === 'all' ? 'รวม' : document.getElementById('roomSelect').value;
-    const period = document.getElementById('reportPeriodSelect').value;
 
+/**
+ * Print one classroom/report per A4 sheet. Measure after fonts load.
+ * Shared by both frontend entry points; keep these copies in sync.
+ */
+async function openFittedA4Report(source, title) {
+    if (!source || !source.textContent.trim()) return;
     const w = window.open('', '_blank');
-    w.document.write(`
-        <!DOCTYPE html>
-        <html lang="th">
-        <head>
-            <meta charset="UTF-8">
-            <title>รายงานผลการตรวจสำเนาคะแนน_${period}_เทอม_${term}_ชั้น${level}_ห้อง${roomStr}</title>
-            <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
-            <style>
-                @page { size: A4 portrait; margin: 6mm 8mm; }
-                * { box-sizing: border-box; }
-                body { font-family: 'Sarabun', sans-serif; margin: 0; padding: 0; background: white; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                .room-page { page-break-after: always; width: 100%; box-sizing: border-box; padding-top: 5px; }
-                .room-page:last-child { page-break-after: avoid; }
-                table { width: 100%; border-collapse: collapse; border: 1px solid #000; font-size: 10px; text-align: center; }
-                th, td { border: 1px solid #000 !important; padding: 2px 3px; }
-                th { background-color: #f1f5f9 !important; font-weight: bold; }
-                @media print {
-                    body { padding: 0; margin: 0; }
-                    .room-page { page-break-after: always; }
-                    .room-page:last-child { page-break-after: avoid; }
-                }
-            </style>
-        </head>
-        <body>
-            ${matrixArea.innerHTML}
-            <script>
-                window.onload = function() {
-                    window.print();
-                    setTimeout(function() { window.close(); }, 500);
-                };
-            <\/script>
-        </body>
-        </html>
-    `);
-    w.document.close();
+    if (!w) {
+        alert('กรุณาอนุญาตหน้าต่างป๊อปอัปเพื่อพิมพ์รายงาน');
+        return;
+    }
+    const doc = w.document;
+    doc.open();
+    doc.write('<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"></head><body></body></html>');
+    doc.close();
+    doc.title = title;
+    const font = doc.createElement('link');
+    font.rel = 'stylesheet';
+    font.href = 'https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap';
+    const fontReady = new Promise(resolve => { font.onload = resolve; font.onerror = resolve; });
+    doc.head.appendChild(font);
+    const style = doc.createElement('style');
+    style.textContent = `
+        @page { size: A4 portrait; margin: 8mm; }
+        * { box-sizing: border-box; }
+        html, body { margin: 0; padding: 0; background: white; color: #000; }
+        body { font-family: Sarabun, Tahoma, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .a4-sheet { width: 194mm; height: 280mm; position: relative; break-after: page; page-break-after: always; }
+        .a4-sheet:last-child { break-after: auto; page-break-after: auto; }
+        .a4-content { display: flow-root; transform-origin: top left; }
+        .a4-content * { min-width: 0 !important; max-height: none !important; }
+        .a4-content .room-page { padding-top: 0 !important; break-after: auto !important; page-break-after: auto !important; }
+        table { width: 100% !important; table-layout: fixed; border-collapse: collapse; }
+        th, td { border: 1px solid black !important; white-space: normal !important;
+            overflow: visible !important; overflow-wrap: anywhere; word-break: normal;
+            line-height: 1.4 !important; vertical-align: middle; }
+        .a4-content div { overflow-wrap: anywhere; }
+        .a4-content [style*="grid"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .a4-content tr { break-inside: avoid; }
+        .print-tools { padding: 12px; font: 14px Tahoma, sans-serif; background: #f1f5f9; }
+        @media print { .print-tools { display: none; } }
+    `;
+    doc.head.appendChild(style);
+    const toolbar = doc.createElement('div');
+    toolbar.className = 'print-tools';
+    toolbar.textContent = 'A4 • 1 ห้อง/รายงานต่อแผ่น • บันทึก PDF: เลือก Save as PDF ในหน้าต่างพิมพ์ • ปิดหัวกระดาษ/ท้ายกระดาษของเบราว์เซอร์ ';
+    const button = doc.createElement('button');
+    button.textContent = 'พิมพ์ / บันทึก PDF';
+    button.disabled = true;
+    toolbar.appendChild(button);
+    doc.body.appendChild(toolbar);
+    const roomPages = Array.from(source.querySelectorAll('.room-page'));
+    const reports = roomPages.length ? roomPages : [source];
+    const sheets = reports.map(report => {
+        const sheet = doc.createElement('section');
+        sheet.className = 'a4-sheet';
+        const content = doc.createElement('div');
+        content.className = 'a4-content';
+        content.appendChild(doc.importNode(report, true));
+        sheet.appendChild(content);
+        doc.body.appendChild(sheet);
+        const table = content.querySelector('table');
+        if (table) {
+            const cols = table.tBodies[0]?.rows[0]?.cells.length || 4;
+            content.style.width = roomPages.length ? Math.max(sheet.clientWidth, 260 + (cols - 3) * 30) + 'px' : sheet.clientWidth + 'px';
+            const colgroup = doc.createElement('colgroup');
+            for (let i = 0; i < cols; i++) {
+                const col = doc.createElement('col');
+                col.style.width = roomPages.length
+                    ? (i === 0 ? '32px' : i === 1 ? '64px' : i === 2 ? '26%' : 'auto')
+                    : (i === 0 ? '5%' : i === 1 ? '11%' : i === 2 ? '30%' : 'auto');
+                colgroup.appendChild(col);
+            }
+            table.prepend(colgroup);
+            table.querySelectorAll('th').forEach(cell => { cell.style.width = ''; });
+            // Rotated subject/teacher labels need a real, measured text box.
+            table.querySelectorAll('td > div, th > div').forEach(label => {
+                if (!label.style.transform.includes('rotate')) return;
+                const cell = label.parentElement;
+                cell.style.height = '172px';
+                label.style.width = '160px';
+                label.style.height = 'auto';
+                label.style.padding = '2px';
+                label.style.lineHeight = '1.4';
+                label.style.whiteSpace = 'normal';
+                label.querySelectorAll('span').forEach(span => {
+                    span.style.whiteSpace = 'normal';
+                    span.style.lineHeight = '1.4';
+                });
+                label.dataset.rotatedLabel = 'true';
+            });
+        }
+        return { sheet, content };
+    });
+    // A failed font request falls back to Tahoma; measure whichever font is used.
+    await Promise.race([fontReady, new Promise(resolve => setTimeout(resolve, 5000))]);
+    if (doc.fonts) await doc.fonts.ready;
+    await new Promise(resolve => w.requestAnimationFrame(() => w.requestAnimationFrame(resolve)));
+    if (w.closed) return;
+    sheets.forEach(({sheet, content}) => {
+        content.querySelectorAll('[data-rotated-label]').forEach(label => {
+            const available = label.parentElement.clientWidth - 4;
+            const spans = label.querySelectorAll('span');
+            let size = parseFloat(w.getComputedStyle(spans[0] || label).fontSize);
+            for (let i = 0; i < 40 && label.getBoundingClientRect().width > available; i++) {
+                size *= 0.95;
+                label.style.fontSize = size + 'px';
+                spans.forEach(span => { span.style.fontSize = size + 'px'; });
+            }
+        });
+        const width = Math.max(content.scrollWidth, content.offsetWidth);
+        const height = Math.max(content.scrollHeight, content.offsetHeight);
+        let scale = Math.min(1, (sheet.clientWidth - 2) / width, (sheet.clientHeight - 2) / height);
+        // zoom also scales layout height, avoiding an extra blank printed page.
+        content.style.zoom = scale;
+        content.style.width = (sheet.clientWidth - 3) / scale + 'px';
+        // Recheck after zoom: browser font rounding can change row heights.
+        for (let i = 0; i < 8; i++) {
+            const bounds = content.getBoundingClientRect();
+            const ratio = Math.min(1, (sheet.clientWidth - 3) / bounds.width,
+                (sheet.clientHeight - 3) / bounds.height);
+            if (ratio >= 1) break;
+            scale *= ratio * 0.995;
+            content.style.zoom = scale;
+            content.style.width = (sheet.clientWidth - 3) / scale + 'px';
+        }
+        // Use the largest readable size that fits after text has reflowed.
+        let low = 0;
+        let high = 1;
+        for (let i = 0; i < 16; i++) {
+            const candidate = (low + high) / 2;
+            content.style.zoom = candidate;
+            content.style.width = (sheet.clientWidth - 3) / candidate + 'px';
+            const bounds = content.getBoundingClientRect();
+            if (bounds.height <= sheet.clientHeight - 3 && bounds.width <= sheet.clientWidth - 2) low = candidate;
+            else high = candidate;
+        }
+        scale = low;
+        content.style.zoom = scale;
+        content.style.width = (sheet.clientWidth - 3) / scale + 'px';
+        sheet.dataset.scale = scale;
+    });
+    button.disabled = false;
+    button.onclick = () => w.print();
+    w.focus();
+    w.print();
 }
 
-function exportPDF(){
-    const element = document.getElementById('matrixPrintArea');
-    const term = document.getElementById('termSelect').value.replace('/','-');
-    const level = document.getElementById('levelSelect').value.replace(/\./g, '');
-    const roomStr = document.getElementById('roomSelect').value === 'all' ? 'รวม' : document.getElementById('roomSelect').value;
-    const period = document.getElementById('reportPeriodSelect').value;
-    const btn = document.getElementById('pdfBtn');
-    const orig = btn.innerHTML;
+function printMatrixReport() {
+    const term = document.getElementById('termSelect').value;
+    const level = document.getElementById('levelSelect').value;
+    const room = document.getElementById('roomSelect').value;
+    return openFittedA4Report(document.getElementById('matrixPrintArea'),
+        'รายงานผลการตรวจสำเนาคะแนน_' + term + '_' + level + '_' + room);
+}
 
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> สร้าง PDF...';
-    btn.disabled = true;
-
-    html2pdf().set({
-        margin: [0.25, 0.3, 0.25, 0.3], 
-        filename: `รายงานผล_${period}_เทอม_${term}_ชั้น${level}_ห้อง${roomStr}.pdf`,
-        image: { type: 'jpeg', quality: 1.0 },
-        pagebreak: { mode: 'css', avoid: ['tr', 'thead', '.room-page'] }, 
-        html2canvas: { scale: 3, useCORS: true, logging: false, scrollY: 0, windowY: 0, letterRendering: true },
-        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
-    }).from(element).save().then(() => {
-        btn.innerHTML = orig;
-        btn.disabled = false;
-    });
+// Browser PDF preserves Thai text and vector tables using the same fitted layout.
+function exportPDF() {
+    return printMatrixReport();
 }
 
 function updateUploadInstructions() {
@@ -2427,58 +2518,12 @@ function closePrintPreviewModal() {
 }
 
 function triggerBrowserPrint() {
-    const printArea = document.getElementById("printArea");
-    if (!printArea) return;
-    const w = window.open('', '_blank');
-    w.document.write(`
-        <!DOCTYPE html>
-        <html lang="th">
-        <head>
-            <meta charset="UTF-8">
-            <title>พิมพ์สำเนาคะแนน (ปพ.5)</title>
-            <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
-            <style>
-                @page { size: A4 portrait; margin: 4mm 8mm; }
-                * { box-sizing: border-box; }
-                body { font-family: 'Sarabun', sans-serif; margin: 0; padding: 0; background: white; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 4px; }
-                th, td { border: 1px solid #000 !important; padding: 2px 4px; }
-                th { background-color: #f1f5f9 !important; font-weight: bold; }
-                @media print {
-                    body { padding: 0; margin: 0; }
-                    div { page-break-inside: avoid; }
-                }
-            </style>
-        </head>
-        <body>
-            ${printArea.innerHTML}
-            <script>
-                window.onload = function() {
-                    window.print();
-                    setTimeout(function() { window.close(); }, 500);
-                };
-            <\/script>
-        </body>
-        </html>
-    `);
-    w.document.close();
+    return openFittedA4Report(document.getElementById('printArea'), 'สำเนาคะแนน_ปพ.5');
 }
 
 function downloadScoreCopyPDF() {
-    const element = document.getElementById('printArea');
-    const select = document.getElementById("subjectSelect");
-    const subjData = JSON.parse(select.value);
-    const filename = `สำเนาคะแนน_${subjData.subjectCode}_ห้อง_${subjData.room}_เทอม_${currentTerm}-${currentYear}.pdf`;
-    
-    html2pdf().set({
-        margin: [0.15, 0.25, 0.15, 0.25],
-        filename: filename,
-        image: { type: 'jpeg', quality: 1.0 },
-        html2canvas: { scale: 2, useCORS: true, logging: false, scrollY: 0, windowY: 0 },
-        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
-    }).from(element).save();
+    return triggerBrowserPrint();
 }
-
 
 // ==========================================
 // ส่วนเพิ่มเติม: ระบบตรวจสอบและอนุมัติสำหรับวิชาการ
@@ -2694,4 +2739,3 @@ function showToast(title, desc) {
         toast.classList.add("translate-y-24", "opacity-0");
     }, 3500);
 }
-
