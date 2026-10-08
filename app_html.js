@@ -1717,7 +1717,7 @@ function renderTeacherAccountsList() {
                 <td class="p-3 text-center border-r border-gray-100">${roleBadge}</td>
                 <td class="p-3 text-center border-r border-gray-100">${statusBadge}</td>
                 <td class="p-3 text-center">
-                    <button onclick="confirmResetPassword('${acc.username}', '${acc.name.replace(/'/g, "\\'")}')" class="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold transition shadow-sm flex items-center gap-1.5 mx-auto">
+                    <button onclick="confirmResetPassword('${acc.username}', '${acc.name.replace(/'/g, "\\'")}')" style="display:inline-flex;align-items:center;gap:6px;margin:auto;padding:6px 12px;background:#f59e0b;color:#fff;border:0;border-radius:8px;font-size:12px;font-weight:700;line-height:1.2;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.15);white-space:nowrap;">
                         <i class="fa-solid fa-key"></i> รีเซ็ตรหัส
                     </button>
                 </td>
