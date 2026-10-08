@@ -679,7 +679,20 @@ switch ($action) {
         $overwrite = $input["overwrite"] ?? false;
 
         if ($type === "teachingLoad") {
-            if ($overwrite) $pdo->exec("TRUNCATE TABLE teaching_load");
+            // Replace only the selected term/year. Never truncate the whole table,
+            // otherwise importing term 2 would erase the existing term 1 load.
+            if ($overwrite && !empty($data)) {
+                $termYearPairs = [];
+                foreach ($data as $row) {
+                    $rowTerm = trim((string)($row[5] ?? ""));
+                    $rowYear = trim((string)($row[6] ?? ""));
+                    if ($rowTerm !== "" && $rowYear !== "") {
+                        $termYearPairs[$rowTerm . "\u0000" . $rowYear] = [$rowTerm, $rowYear];
+                    }
+                }
+                $delete = $pdo->prepare("DELETE FROM teaching_load WHERE term = ? AND year = ?");
+                foreach ($termYearPairs as $pair) $delete->execute($pair);
+            }
             $ins = $pdo->prepare("INSERT INTO teaching_load (teacher_name, subject_code, subject_name, class_level, room, term, year) VALUES (?, ?, ?, ?, ?, ?, ?)");
             foreach ($data as $row) {
                 $ins->execute([$row[0], $row[1], $row[2], $row[3], $row[4], $row[5], $row[6]]);
