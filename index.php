@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ระบบผลการเรียน โรงเรียนมกุฎเมืองราชวิทยาลัย</title>
-<script src="adapter.js"></script>
+<script src="adapter.js?v=20261009-username-edit"></script>
 <link rel="stylesheet" href="tailwind.css">
 <script src="font-awesome.js"></script>
 <script src="xlsx.js"></script>
@@ -580,6 +580,8 @@ tr.hover\:bg-green-50\/50:hover td.sticky-col-1, tr.hover\:bg-green-50\/50:hover
             </table>
         </div>
 
+        <p class="mt-2 text-xs text-blue-700">หากวิชาและห้องมีอยู่แล้ว ให้กด “แก้ชื่อครู” ที่รายการภาระงานสอนด้านล่าง เพื่อไม่ให้ข้อมูลซ้ำ</p>
+
         <div class="mt-6 flex justify-end">
             <button id="btnSaveDb" onclick="saveDbData()" class="bg-green-600 text-white px-8 py-3 rounded-lg hover:bg-green-700 transition flex items-center gap-2 font-bold shadow-md">
                 <i class="fa-solid fa-cloud-arrow-up"></i> บันทึกข้อมูลตาราง
@@ -649,7 +651,7 @@ tr.hover\:bg-green-50\/50:hover td.sticky-col-1, tr.hover\:bg-green-50\/50:hover
 
         <div id="teachingLoadSummary" class="hidden mb-3 text-xs font-bold text-blue-900 bg-blue-100/70 px-4 py-2.5 rounded-xl flex items-center justify-between border border-blue-200">
             <span id="teachingLoadStatsText"></span>
-            <span class="text-gray-600 font-normal"><i class="fa-solid fa-circle-check text-green-600 mr-1"></i> รวมห้องที่ครูสอนวิชาเดียวกันในระดับชั้นเดียวกัน</span>
+            <span class="text-gray-600 font-normal"><i class="fa-solid fa-circle-check text-green-600 mr-1"></i> กด “แก้ชื่อครู” เพื่อเพิ่มครูสอนร่วมโดยคั่นชื่อด้วย ,</span>
         </div>
         <div class="overflow-x-auto border rounded-lg table-scrollbar max-h-[50vh]">
             <table class="w-full text-left border-collapse text-sm">
@@ -678,7 +680,7 @@ tr.hover\:bg-green-50\/50:hover td.sticky-col-1, tr.hover\:bg-green-50\/50:hover
                 <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2">
                     <i class="fa-solid fa-users-gear text-blue-600"></i> จัดการบัญชีผู้ใช้งานและรีเซ็ตรหัสผ่าน
                 </h3>
-                <p class="text-xs text-gray-500 mt-0.5">ตรวจสอบสถานะบัญชีครูทุกคน และกดรีเซ็ตรหัสผ่านกลับเป็นรหัสเริ่มต้น (Password@123) ได้ทันที</p>
+                <p class="text-xs text-gray-500 mt-0.5">แก้ Username โดยคงรหัสผ่านและสิทธิ์เดิม หรือตั้งรหัสผ่านกลับเป็น Password@123</p>
             </div>
             <div class="flex items-center gap-3">
                 <div class="relative">
@@ -705,7 +707,7 @@ tr.hover\:bg-green-50\/50:hover td.sticky-col-1, tr.hover\:bg-green-50\/50:hover
                         <th class="p-3 border-b border-gray-200 text-center w-28">ห้องที่ปรึกษา</th>
                         <th class="p-3 border-b border-gray-200 text-center w-28">สิทธิ์</th>
                         <th class="p-3 border-b border-gray-200 text-center w-48">สถานะรหัสผ่าน</th>
-                        <th class="p-3 border-b border-gray-200 text-center w-36">การจัดการ</th>
+                        <th class="p-3 border-b border-gray-200 text-center w-48">การจัดการ</th>
                     </tr>
                 </thead>
                 <tbody id="teacherAccountsBody">
@@ -931,6 +933,6 @@ tr.hover\:bg-green-50\/50:hover td.sticky-col-1, tr.hover\:bg-green-50\/50:hover
     </div>
 </div>
 
-<script src="app.js?v=20261009-1352"></script>
+<script src="app.js?v=20261009-username-edit"></script>
 </body>
 </html>

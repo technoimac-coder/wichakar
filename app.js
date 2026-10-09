@@ -472,6 +472,7 @@ function closeLogoutModal(){
     document.getElementById('logoutModal').classList.add('hidden');
 }
 function confirmLogout(){
+    google.script.run.logoutSession();
     sessionStorage.removeItem('mmv_session');
     document.getElementById('logoutModal').classList.add('hidden');
     document.getElementById('mainAppSection').classList.add('hidden');
@@ -1459,6 +1460,7 @@ function loadMissingGrades() {
 }
 
 let rawTeachingLoadData = [];
+let displayedTeachingLoadGroups = [];
 let selectedTeachingLoadLevel = 'ALL';
 
 function selectTeachingLoadLevel(lvl) {
@@ -1591,12 +1593,14 @@ function renderGroupedTeachingLoad() {
                 code: row.code,
                 name: row.name,
                 level: cleanLvl,
-                rooms: [row.room]
+                rooms: [row.room],
+                ids: [Number(row.id)]
             };
         } else {
             if (!grouped[key].rooms.includes(row.room)) {
                 grouped[key].rooms.push(row.room);
             }
+            grouped[key].ids.push(Number(row.id));
         }
     });
 
@@ -1611,6 +1615,7 @@ function renderGroupedTeachingLoad() {
         if (a.code !== b.code) return a.code.localeCompare(b.code, 'th');
         return a.teacher.localeCompare(b.teacher, 'th');
     });
+    displayedTeachingLoadGroups = groupedRows;
 
     if (sumDiv && statsText) {
         sumDiv.classList.remove('hidden');
@@ -1622,7 +1627,7 @@ function renderGroupedTeachingLoad() {
     let currentLvl = "";
     let html = "";
 
-    groupedRows.forEach(row => {
+    groupedRows.forEach((row, groupIndex) => {
         if (selectedTeachingLoadLevel === 'ALL' && row.level !== currentLvl) {
             currentLvl = row.level;
             html += `
@@ -1645,6 +1650,7 @@ function renderGroupedTeachingLoad() {
                         <i class="fa-solid fa-chalkboard-user"></i>
                     </div>
                     <span>${tName}</span>
+                    <button type="button" onclick="editTeachingLoadTeachers(${groupIndex})" class="ml-auto px-2 py-1 rounded-md bg-blue-50 text-blue-700 border border-blue-200 text-[11px] hover:bg-blue-100 whitespace-nowrap" title="แก้ชื่อครูผู้สอนในห้องที่แสดง"><i class="fa-solid fa-pen"></i> แก้ชื่อครู</button>
                 </td>
                 <td class="p-3 border-r font-mono text-xs font-bold text-indigo-700">${row.code}</td>
                 <td class="p-3 border-r text-gray-800 font-medium">${row.name}</td>
@@ -1661,6 +1667,29 @@ function renderGroupedTeachingLoad() {
     });
 
     tbody.innerHTML = html;
+}
+
+function editTeachingLoadTeachers(groupIndex) {
+    const group = displayedTeachingLoadGroups[groupIndex];
+    if (!group || !Array.isArray(group.ids) || group.ids.length === 0) return;
+    const entered = prompt(`แก้ชื่อครูผู้สอนของ ${group.name} (${group.code}) ห้อง ${formatRooms(group.rooms)}\nหากสอนร่วม ให้คั่นชื่อครูด้วย ,`, group.teacher);
+    if (entered === null) return;
+    const teacherName = [...new Set(entered.split(',').map(name => name.trim()).filter(Boolean))].join(', ');
+    if (!teacherName || teacherName.length > 100) {
+        alert('กรุณาระบุชื่อครูผู้สอนให้ถูกต้อง ไม่เกิน 100 ตัวอักษร');
+        return;
+    }
+    if (teacherName === group.teacher) return;
+    google.script.run.withSuccessHandler(function(res) {
+        if (res.success) {
+            showToast('แก้ไขสำเร็จ', res.message || 'แก้ชื่อครูผู้สอนแล้ว');
+            loadExistingTeachingLoad();
+        } else {
+            alert(res.message || 'แก้ชื่อครูผู้สอนไม่สำเร็จ');
+        }
+    }).withFailureHandler(function(err) {
+        alert('เกิดข้อผิดพลาด: ' + err.message);
+    }).updateTeachingLoadTeachers(group.ids, group.teacher, teacherName);
 }
 
 
@@ -1710,6 +1739,7 @@ function renderTeacherAccountsList() {
 
     let html = '';
     filtered.forEach(acc => {
+        const accountIndex = rawTeacherAccounts.indexOf(acc);
         let isDef = (acc.isDefaultPassword == 1 || acc.isDefaultPassword === true || acc.isDefaultPassword === "1");
         let statusBadge = isDef ? 
             '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200"><i class="fa-solid fa-triangle-exclamation text-[10px]"></i> รหัสเริ่มต้น (Password@123)</span>' :
@@ -1734,15 +1764,55 @@ function renderTeacherAccountsList() {
                 <td class="p-3 text-center border-r border-gray-100">${roleBadge}</td>
                 <td class="p-3 text-center border-r border-gray-100">${statusBadge}</td>
                 <td class="p-3 text-center">
-                    <button onclick="confirmResetPassword('${acc.username}', '${acc.name.replace(/'/g, "\\'")}')" class="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold transition shadow-sm flex items-center gap-1.5 mx-auto">
-                        <i class="fa-solid fa-key"></i> รีเซ็ตรหัส
-                    </button>
+                    <div class="flex flex-wrap justify-center gap-1.5">
+                        <button type="button" onclick="editTeacherUsername(${accountIndex})" class="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition shadow-sm whitespace-nowrap">
+                            <i class="fa-solid fa-pen"></i> แก้ Username
+                        </button>
+                        <button type="button" onclick="confirmResetPasswordByIndex(${accountIndex})" class="px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold transition shadow-sm whitespace-nowrap">
+                            <i class="fa-solid fa-key"></i> รีเซ็ตรหัส
+                        </button>
+                    </div>
                 </td>
             </tr>
         `;
     });
 
     tbody.innerHTML = html;
+}
+
+function editTeacherUsername(accountIndex) {
+    const account = rawTeacherAccounts[accountIndex];
+    if (!account) return;
+    const entered = prompt(`แก้ Username ของ ${account.name}\nรหัสผ่านและสิทธิ์จะยังเหมือนเดิม`, account.username);
+    if (entered === null) return;
+    const newUsername = entered.trim();
+    if (!/^[A-Za-z0-9._@-]{1,50}$/.test(newUsername)) {
+        alert('Username ต้องมี 1-50 ตัวอักษร และใช้เฉพาะตัวอักษรอังกฤษ ตัวเลข . _ @ -');
+        return;
+    }
+    if (newUsername === account.username) return;
+    if (!confirm(`ยืนยันเปลี่ยน Username จาก ${account.username} เป็น ${newUsername}?`)) return;
+    google.script.run.withSuccessHandler(function(res) {
+        if (res.success) {
+            if (currentTeacherId.toLowerCase() === account.username.toLowerCase()) {
+                currentTeacherId = newUsername.toUpperCase();
+                const savedSession = JSON.parse(sessionStorage.getItem('mmv_session') || '{}');
+                savedSession.id = currentTeacherId;
+                sessionStorage.setItem('mmv_session', JSON.stringify(savedSession));
+            }
+            showToast('แก้ไขสำเร็จ', res.message || 'แก้ Username แล้ว');
+            loadTeacherAccountsList();
+        } else {
+            alert(res.message || 'แก้ Username ไม่สำเร็จ');
+        }
+    }).withFailureHandler(function(err) {
+        alert('เกิดข้อผิดพลาด: ' + err.message);
+    }).updateTeacherUsername(account.username, newUsername);
+}
+
+function confirmResetPasswordByIndex(accountIndex) {
+    const account = rawTeacherAccounts[accountIndex];
+    if (account) confirmResetPassword(account.username, account.name);
 }
 
 function confirmResetPassword(username, teacherName) {

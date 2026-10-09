@@ -6,6 +6,12 @@
 
 require_once __DIR__ . "/config.php";
 
+ini_set('session.cookie_httponly', '1');
+ini_set('session.cookie_samesite', 'Lax');
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_start();
+}
+
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type");
@@ -246,6 +252,9 @@ switch ($action) {
         $stmt->execute([$u, $p]);
         $user = $stmt->fetch();
         if ($user) {
+            session_regenerate_id(true);
+            $_SESSION["teacher_id"] = (int)$user["id"];
+            $_SESSION["role"] = $user["role"];
             $mustChange = ($p === "Password@123" || $p === "1234");
             echo json_encode([
                 "success" => true,
@@ -255,7 +264,52 @@ switch ($action) {
                 "mustChangePassword" => $mustChange
             ], JSON_UNESCAPED_UNICODE);
         } else {
+            unset($_SESSION["teacher_id"], $_SESSION["role"]);
             echo json_encode(["success" => false, "message" => "รหัสประจำตัวหรือรหัสผ่านไม่ถูกต้อง"], JSON_UNESCAPED_UNICODE);
+        }
+        break;
+
+    case "logoutSession":
+        $_SESSION = [];
+        session_destroy();
+        echo json_encode(["success" => true], JSON_UNESCAPED_UNICODE);
+        break;
+
+    case "updateTeacherUsername":
+        if (($_SESSION["role"] ?? "") !== "Admin") {
+            echo json_encode(["success" => false, "message" => "กรุณาออกจากระบบแล้วเข้าสู่ระบบใหม่ด้วยบัญชีผู้ดูแล"], JSON_UNESCAPED_UNICODE);
+            break;
+        }
+        $oldUsername = trim((string)($input["oldUsername"] ?? ""));
+        $newUsername = trim((string)($input["newUsername"] ?? ""));
+        if ($oldUsername === "" || !preg_match('/^[A-Za-z0-9._@-]{1,50}$/D', $newUsername)) {
+            echo json_encode(["success" => false, "message" => "Username ใหม่ต้องมี 1-50 ตัวอักษร และใช้เฉพาะตัวอักษรอังกฤษ ตัวเลข . _ @ -"], JSON_UNESCAPED_UNICODE);
+            break;
+        }
+        try {
+            $pdo->beginTransaction();
+            $find = $pdo->prepare("SELECT id FROM teachers WHERE username = ? FOR UPDATE");
+            $find->execute([$oldUsername]);
+            $teacher = $find->fetch(PDO::FETCH_ASSOC);
+            if (!$teacher) {
+                $pdo->rollBack();
+                echo json_encode(["success" => false, "message" => "ไม่พบบัญชีเดิม กรุณาโหลดข้อมูลใหม่"], JSON_UNESCAPED_UNICODE);
+                break;
+            }
+            $duplicate = $pdo->prepare("SELECT id FROM teachers WHERE username = ? AND id <> ? LIMIT 1");
+            $duplicate->execute([$newUsername, $teacher["id"]]);
+            if ($duplicate->fetch()) {
+                $pdo->rollBack();
+                echo json_encode(["success" => false, "message" => "Username นี้มีผู้ใช้งานแล้ว"], JSON_UNESCAPED_UNICODE);
+                break;
+            }
+            $update = $pdo->prepare("UPDATE teachers SET username = ? WHERE id = ?");
+            $update->execute([$newUsername, $teacher["id"]]);
+            $pdo->commit();
+            echo json_encode(["success" => true, "message" => "แก้ Username เรียบร้อยแล้ว โดยรหัสผ่านและสิทธิ์เดิมไม่เปลี่ยน"], JSON_UNESCAPED_UNICODE);
+        } catch (PDOException $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            echo json_encode(["success" => false, "message" => "บันทึก Username ไม่สำเร็จ กรุณาตรวจสอบว่าข้อมูลไม่ซ้ำ"], JSON_UNESCAPED_UNICODE);
         }
         break;
 
@@ -678,10 +732,46 @@ switch ($action) {
     case "getExistingTeachingLoad":
         $t = $input["term"] ?? "2";
         $y = $input["year"] ?? "2567";
-        $stmt = $pdo->prepare("SELECT teacher_name as teacher, subject_code as code, subject_name as name, class_level as level, room 
+        $stmt = $pdo->prepare("SELECT id, teacher_name as teacher, subject_code as code, subject_name as name, class_level as level, room 
                                FROM teaching_load WHERE term = ? AND year = ? ORDER BY teacher_name ASC, subject_code ASC, CAST(room AS UNSIGNED) ASC");
         $stmt->execute([$t, $y]);
         echo json_encode($stmt->fetchAll(), JSON_UNESCAPED_UNICODE);
+        break;
+
+    case "updateTeachingLoadTeachers":
+        if (($_SESSION["role"] ?? "") !== "Admin") {
+            echo json_encode(["success" => false, "message" => "กรุณาออกจากระบบแล้วเข้าสู่ระบบใหม่ด้วยบัญชีผู้ดูแล"], JSON_UNESCAPED_UNICODE);
+            break;
+        }
+        $rawIds = $input["ids"] ?? [];
+        $ids = is_array($rawIds) ? array_values(array_unique(array_filter(array_map('intval', $rawIds), static fn($id) => $id > 0))) : [];
+        $oldTeacher = trim((string)($input["oldTeacher"] ?? ""));
+        $names = array_values(array_unique(array_filter(array_map('trim', explode(',', (string)($input["teacherName"] ?? ""))), static fn($name) => $name !== "")));
+        $teacherName = implode(', ', $names);
+        $nameLength = function_exists('mb_strlen') ? mb_strlen($teacherName, 'UTF-8') : preg_match_all('/./us', $teacherName);
+        if (!$ids || count($ids) > 100 || $oldTeacher === "" || $teacherName === "" || $nameLength > 100) {
+            echo json_encode(["success" => false, "message" => "กรุณาระบุชื่อครูให้ถูกต้อง (ไม่เกิน 100 ตัวอักษร)"], JSON_UNESCAPED_UNICODE);
+            break;
+        }
+        try {
+            $pdo->beginTransaction();
+            $marks = implode(',', array_fill(0, count($ids), '?'));
+            $check = $pdo->prepare("SELECT id, teacher_name FROM teaching_load WHERE id IN ($marks) FOR UPDATE");
+            $check->execute($ids);
+            $rows = $check->fetchAll(PDO::FETCH_ASSOC);
+            if (count($rows) !== count($ids) || count(array_filter($rows, static fn($row) => trim($row["teacher_name"]) !== $oldTeacher)) > 0) {
+                $pdo->rollBack();
+                echo json_encode(["success" => false, "message" => "ข้อมูลภาระงานสอนเปลี่ยนไปแล้ว กรุณาโหลดข้อมูลใหม่"], JSON_UNESCAPED_UNICODE);
+                break;
+            }
+            $update = $pdo->prepare("UPDATE teaching_load SET teacher_name = ? WHERE id IN ($marks)");
+            $update->execute(array_merge([$teacherName], $ids));
+            $pdo->commit();
+            echo json_encode(["success" => true, "message" => "แก้ครูผู้สอนเรียบร้อยแล้ว " . count($ids) . " ห้อง"], JSON_UNESCAPED_UNICODE);
+        } catch (PDOException $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            echo json_encode(["success" => false, "message" => "แก้ครูผู้สอนไม่สำเร็จ"], JSON_UNESCAPED_UNICODE);
+        }
         break;
 
     // 14. บันทึกข้อมูลตารางต่างๆ จากฟอร์ม / Excel
