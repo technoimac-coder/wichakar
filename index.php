@@ -580,7 +580,7 @@ tr.hover\:bg-green-50\/50:hover td.sticky-col-1, tr.hover\:bg-green-50\/50:hover
             </table>
         </div>
 
-        <p class="mt-2 text-xs text-blue-700">หากวิชาและห้องมีอยู่แล้ว ให้กด “แก้ชื่อครู” ที่รายการภาระงานสอนด้านล่าง เพื่อไม่ให้ข้อมูลซ้ำ</p>
+        <p class="mt-2 text-xs text-blue-700">หากวิชาและห้องมีอยู่แล้ว บันทึกข้อมูลเพื่อแก้ชื่อครูได้โดยไม่เพิ่มรายการซ้ำ หรือกด “แก้ชื่อครู” ที่รายการด้านล่าง</p>
 
         <div class="mt-6 flex justify-end">
             <button id="btnSaveDb" onclick="saveDbData()" class="bg-green-600 text-white px-8 py-3 rounded-lg hover:bg-green-700 transition flex items-center gap-2 font-bold shadow-md">
@@ -751,13 +751,13 @@ tr.hover\:bg-green-50\/50:hover td.sticky-col-1, tr.hover\:bg-green-50\/50:hover
                 <div class="text-gray-500">
                     <i class="fa-solid fa-cloud-arrow-up text-4xl mb-2 text-blue-500"></i>
                     <p class="font-bold text-gray-700" id="excelFileNameDisplay">คลิกหรือลากไฟล์ Excel มาวางที่นี่</p>
-                    <p class="text-xs mt-1 text-blue-600 font-medium" id="excelInstructions">คอลัมน์ A-G: ชื่อครู | รหัสวิชา | ชื่อรายวิชา | ระดับชั้น | ห้อง | ภาคเรียน | ปีการศึกษา</p>
+                    <p class="text-xs mt-1 text-blue-600 font-medium" id="excelInstructions">คอลัมน์ A-G: ชื่อครู (สอนร่วมคั่นด้วย ,) | รหัสวิชา | ชื่อรายวิชา | ระดับชั้น | ห้อง | ภาคเรียน | ปีการศึกษา · วิชาเดิมจะปรับชื่อครูโดยไม่เพิ่มแถวซ้ำ</p>
                 </div>
             </div>
             <div class="flex flex-col gap-2 w-full md:w-auto">
                 <label class="flex items-center gap-2 p-2 bg-red-50 rounded border border-red-200 cursor-pointer">
-                    <input type="checkbox" id="overwriteExcelCheck" class="w-4 h-4 text-red-600" checked>
-                    <span class="text-xs font-bold text-red-700">ล้างข้อมูลเดิมในแผ่นงาน (เขียนทับ)</span>
+                    <input type="checkbox" id="overwriteExcelCheck" class="w-4 h-4 text-red-600">
+                    <span id="overwriteExcelLabel" class="text-xs font-bold text-red-700">ลบภาระงานสอนเดิมทั้งภาคเรียน/ปีในไฟล์ แล้วแทนที่ทั้งชุด</span>
                 </label>
                 <button id="btnUploadExcel" onclick="processExcelUpload()" class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition font-bold shadow-md whitespace-nowrap opacity-50 cursor-not-allowed" disabled>
                     <i class="fa-solid fa-upload mr-1"></i> เริ่มอัปโหลด
@@ -947,6 +947,6 @@ tr.hover\:bg-green-50\/50:hover td.sticky-col-1, tr.hover\:bg-green-50\/50:hover
     </div>
 </div>
 
-<script src="app.js?v=20261009-username-edit-2"></script>
+<script src="app.js?v=20261009-bulk-teachers"></script>
 </body>
 </html>

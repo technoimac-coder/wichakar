@@ -1152,12 +1152,18 @@ function exportPDF() {
 function updateUploadInstructions() {
     const type = document.querySelector('input[name="fileUploadType"]:checked').value;
     const instr = document.getElementById('excelInstructions');
+    const overwriteCheck = document.getElementById('overwriteExcelCheck');
+    const overwriteLabel = document.getElementById('overwriteExcelLabel');
+    if (overwriteCheck) overwriteCheck.checked = false;
+    if (overwriteLabel) overwriteLabel.textContent = type === 'teachingLoad'
+        ? 'ลบภาระงานสอนเดิมทั้งภาคเรียน/ปีในไฟล์ แล้วแทนที่ทั้งชุด'
+        : 'ล้างข้อมูลเดิมทั้งหมดของประเภทนี้ แล้วแทนที่ด้วยไฟล์';
     if (type === 'teachers') {
         instr.innerText = "คอลัมน์ A-D: Username (รหัสประจำตัว) | ชื่อ-นามสกุลครู | ห้องที่ปรึกษา (เช่น ม.1/1) | สิทธิ์ (Teacher/Admin) *รหัสผ่านเริ่มต้นคือ Password@123";
     } else if (type === 'students') {
         instr.innerText = "คอลัมน์ A-E: เลขที่ | รหัสประจำตัวนักเรียน | ชื่อ-นามสกุล | ระดับชั้น (เช่น ม.1) | ห้อง (เช่น 1)";
     } else if (type === 'teachingLoad') {
-        instr.innerText = "คอลัมน์ A-G: ชื่อครู | รหัสวิชา | ชื่อรายวิชา | ระดับชั้น | ห้อง | ภาคเรียน | ปีการศึกษา";
+        instr.innerText = "คอลัมน์ A-G: ชื่อครู (สอนร่วมคั่นด้วย ,) | รหัสวิชา | ชื่อรายวิชา | ระดับชั้น | ห้อง | ภาคเรียน | ปีการศึกษา · วิชาเดิมจะปรับชื่อครูโดยไม่เพิ่มแถวซ้ำ";
     } else if (type === 'clubStudents') {
         instr.innerText = "คอลัมน์ A-E: ชื่อชุมนุม | รหัสนักเรียน | ชื่อ-สกุล | ชั้น | ห้อง";
     } else if (type === 'isStudents') {
@@ -1355,9 +1361,14 @@ function processExcelUpload() {
             } else {
                 google.script.run.withSuccessHandler(function(msg) {
                     btn.innerHTML = '<i class="fa-solid fa-upload mr-1"></i> เริ่มอัปโหลด';
-                    showExcelUploadStatus(msg, true);
-                    resetExcelFileInput();
-                    loadExistingTeachingLoad(); 
+                    const success = !msg || msg.success !== false;
+                    showExcelUploadStatus(msg, success);
+                    if (success) {
+                        resetExcelFileInput();
+                        loadExistingTeachingLoad();
+                    } else {
+                        btn.disabled = false;
+                    }
                 }).withFailureHandler(function(err) {
                     btn.innerHTML = '<i class="fa-solid fa-upload mr-1"></i> เริ่มอัปโหลด';
                     btn.disabled = false;
@@ -2019,6 +2030,10 @@ function saveDbData() {
     google.script.run.withSuccessHandler(function(msg){
         btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> บันทึกข้อมูลตาราง';
         btn.disabled = false;
+        if (msg && msg.success === false) {
+            showToast('บันทึกไม่สำเร็จ', msg.message || 'กรุณาตรวจสอบข้อมูล');
+            return;
+        }
         let text = (typeof msg === 'object' && msg !== null && msg.message) ? msg.message : msg;
         showToast("บันทึกสำเร็จ", text);
         

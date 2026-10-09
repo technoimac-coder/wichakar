@@ -781,25 +781,81 @@ switch ($action) {
         $overwrite = $input["overwrite"] ?? false;
 
         if ($type === "teachingLoad") {
-            // Replace only the selected term/year. Never truncate the whole table,
-            // otherwise importing term 2 would erase the existing term 1 load.
-            if ($overwrite && !empty($data)) {
-                $termYearPairs = [];
-                foreach ($data as $row) {
-                    $rowTerm = trim((string)($row[5] ?? ""));
-                    $rowYear = trim((string)($row[6] ?? ""));
-                    if ($rowTerm !== "" && $rowYear !== "") {
-                        $termYearPairs[$rowTerm . "\u0000" . $rowYear] = [$rowTerm, $rowYear];
-                    }
+            if (($_SESSION["role"] ?? "") !== "Admin") {
+                echo json_encode(["success" => false, "message" => "กรุณาออกจากระบบแล้วเข้าสู่ระบบใหม่ด้วยบัญชีผู้ดูแล"], JSON_UNESCAPED_UNICODE);
+                break;
+            }
+            $normalized = [];
+            $termYearPairs = [];
+            $seen = [];
+            $validationError = "";
+            if (!is_array($data)) $data = [];
+            foreach ($data as $index => $row) {
+                $teacher = implode(', ', array_values(array_unique(array_filter(array_map('trim', explode(',', (string)($row[0] ?? ''))), static fn($name) => $name !== ''))));
+                $code = trim((string)($row[1] ?? ''));
+                $name = trim((string)($row[2] ?? ''));
+                $level = trim((string)($row[3] ?? ''));
+                $levelNumber = preg_replace('/^ม\.?/u', '', $level);
+                $room = trim((string)($row[4] ?? ''));
+                $term = trim((string)($row[5] ?? ''));
+                $year = trim((string)($row[6] ?? ''));
+                $teacherLength = function_exists('mb_strlen') ? mb_strlen($teacher, 'UTF-8') : preg_match_all('/./us', $teacher);
+                $codeLength = function_exists('mb_strlen') ? mb_strlen($code, 'UTF-8') : preg_match_all('/./us', $code);
+                $nameLength = function_exists('mb_strlen') ? mb_strlen($name, 'UTF-8') : preg_match_all('/./us', $name);
+                if ($teacher === '' || $teacherLength > 100 || $code === '' || $codeLength > 20 || $name === '' || $nameLength > 150 || !preg_match('/^[1-6]$/', $levelNumber) || !preg_match('/^[1-9][0-9]?$/', $room) || !in_array($term, ['1', '2'], true) || !preg_match('/^[0-9]{4}$/', $year)) {
+                    $validationError = 'ข้อมูลภาระงานสอนแถวที่ ' . ($index + 1) . ' ไม่ครบหรือเกินความยาวที่กำหนด';
+                    break;
                 }
-                $delete = $pdo->prepare("DELETE FROM teaching_load WHERE term = ? AND year = ?");
-                foreach ($termYearPairs as $pair) $delete->execute($pair);
+                $level = 'ม.' . $levelNumber;
+                $room = (string)(int)$room;
+                $compactCode = preg_replace('/\s+/u', '', $code);
+                $key = implode('|', [$term, $year, $compactCode, $levelNumber, $room]);
+                if (isset($seen[$key])) {
+                    if ($seen[$key] !== $teacher) {
+                        $validationError = 'พบรายวิชา/ห้องซ้ำในไฟล์ที่มีชื่อครูต่างกัน กรุณารวมชื่อครูในช่องเดียวโดยคั่นด้วย ,';
+                        break;
+                    }
+                    continue;
+                }
+                $seen[$key] = $teacher;
+                $normalized[] = [$teacher, $code, $name, $level, $room, $term, $year, $levelNumber, $compactCode];
+                $termYearPairs[$term . '|' . $year] = [$term, $year];
             }
-            $ins = $pdo->prepare("INSERT INTO teaching_load (teacher_name, subject_code, subject_name, class_level, room, term, year) VALUES (?, ?, ?, ?, ?, ?, ?)");
-            foreach ($data as $row) {
-                $ins->execute([$row[0], $row[1], $row[2], $row[3], $row[4], $row[5], $row[6]]);
+            if ($validationError !== '' || !$normalized) {
+                echo json_encode(["success" => false, "message" => $validationError ?: 'ไม่พบข้อมูลภาระงานสอนในไฟล์'], JSON_UNESCAPED_UNICODE);
+                break;
             }
-            echo json_encode(["success" => true, "message" => "บันทึกภาระงานสอนเรียบร้อยแล้ว (" . count($data) . " รายการ)"], JSON_UNESCAPED_UNICODE);
+            try {
+                $pdo->beginTransaction();
+                if ($overwrite) {
+                    // Full replacement is limited to the terms/years explicitly present in the file.
+                    $delete = $pdo->prepare("DELETE FROM teaching_load WHERE term = ? AND year = ?");
+                    foreach ($termYearPairs as $pair) $delete->execute($pair);
+                }
+                $find = $pdo->prepare("SELECT id FROM teaching_load WHERE term = ? AND year = ? AND REPLACE(subject_code, ' ', '') = ? AND REPLACE(REPLACE(class_level, 'ม.', ''), 'ม', '') = ? AND CAST(room AS UNSIGNED) = ? FOR UPDATE");
+                $update = $pdo->prepare("UPDATE teaching_load SET teacher_name = ? WHERE id = ?");
+                $insert = $pdo->prepare("INSERT INTO teaching_load (teacher_name, subject_code, subject_name, class_level, room, term, year) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                $updated = 0;
+                $added = 0;
+                foreach ($normalized as $row) {
+                    if (!$overwrite) {
+                        $find->execute([$row[5], $row[6], $row[8], $row[7], $row[4]]);
+                        $matches = $find->fetchAll(PDO::FETCH_COLUMN);
+                        if ($matches) {
+                            foreach ($matches as $id) $update->execute([$row[0], $id]);
+                            $updated++;
+                            continue;
+                        }
+                    }
+                    $insert->execute(array_slice($row, 0, 7));
+                    $added++;
+                }
+                $pdo->commit();
+                echo json_encode(["success" => true, "message" => "บันทึกภาระงานสอนแล้ว: เพิ่มใหม่ $added รายการ, แก้ชื่อครูวิชาเดิม $updated รายการ"], JSON_UNESCAPED_UNICODE);
+            } catch (Throwable $e) {
+                if ($pdo->inTransaction()) $pdo->rollBack();
+                echo json_encode(["success" => false, "message" => "บันทึกภาระงานสอนไม่สำเร็จ ข้อมูลเดิมยังไม่เปลี่ยน"], JSON_UNESCAPED_UNICODE);
+            }
         } elseif ($type === "teachers") {
             if ($overwrite) $pdo->exec("TRUNCATE TABLE teachers");
             $ins = $pdo->prepare("INSERT INTO teachers (username, password, name, advisor_room, role) VALUES (?, ?, ?, ?, ?)");
