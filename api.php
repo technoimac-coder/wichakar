@@ -788,6 +788,7 @@ switch ($action) {
             $normalized = [];
             $termYearPairs = [];
             $seen = [];
+            $fileKeyCounts = [];
             $validationError = "";
             if (!is_array($data)) $data = [];
             foreach ($data as $index => $row) {
@@ -810,15 +811,11 @@ switch ($action) {
                 $room = (string)(int)$room;
                 $compactCode = preg_replace('/\s+/u', '', $code);
                 $key = implode('|', [$term, $year, $compactCode, $levelNumber, $room]);
-                if (isset($seen[$key])) {
-                    if ($seen[$key] !== $teacher) {
-                        $validationError = 'พบรายวิชา/ห้องซ้ำในไฟล์ที่มีชื่อครูต่างกัน กรุณารวมชื่อครูในช่องเดียวโดยคั่นด้วย ,';
-                        break;
-                    }
-                    continue;
-                }
-                $seen[$key] = $teacher;
-                $normalized[] = [$teacher, $code, $name, $level, $room, $term, $year, $levelNumber, $compactCode];
+                $fileRowKey = $key . "\x1F" . $teacher;
+                if (isset($seen[$fileRowKey])) continue;
+                $seen[$fileRowKey] = true;
+                $fileKeyCounts[$key] = ($fileKeyCounts[$key] ?? 0) + 1;
+                $normalized[] = [$teacher, $code, $name, $level, $room, $term, $year, $levelNumber, $compactCode, $key];
                 $termYearPairs[$term . '|' . $year] = [$term, $year];
             }
             if ($validationError !== '' || !$normalized) {
@@ -832,19 +829,39 @@ switch ($action) {
                     $delete = $pdo->prepare("DELETE FROM teaching_load WHERE term = ? AND year = ?");
                     foreach ($termYearPairs as $pair) $delete->execute($pair);
                 }
-                $find = $pdo->prepare("SELECT id FROM teaching_load WHERE term = ? AND year = ? AND REPLACE(subject_code, ' ', '') = ? AND REPLACE(REPLACE(class_level, 'ม.', ''), 'ม', '') = ? AND CAST(room AS UNSIGNED) = ? FOR UPDATE");
+                $find = $pdo->prepare("SELECT id, teacher_name FROM teaching_load WHERE term = ? AND year = ? AND REPLACE(subject_code, ' ', '') = ? AND REPLACE(REPLACE(class_level, 'ม.', ''), 'ม', '') = ? AND CAST(room AS UNSIGNED) = ? FOR UPDATE");
                 $update = $pdo->prepare("UPDATE teaching_load SET teacher_name = ? WHERE id = ?");
                 $insert = $pdo->prepare("INSERT INTO teaching_load (teacher_name, subject_code, subject_name, class_level, room, term, year) VALUES (?, ?, ?, ?, ?, ?, ?)");
                 $updated = 0;
                 $added = 0;
+                $originalRows = [];
                 foreach ($normalized as $row) {
                     if (!$overwrite) {
-                        $find->execute([$row[5], $row[6], $row[8], $row[7], $row[4]]);
-                        $matches = $find->fetchAll(PDO::FETCH_COLUMN);
+                        $key = $row[9];
+                        if (!array_key_exists($key, $originalRows)) {
+                            $find->execute([$row[5], $row[6], $row[8], $row[7], $row[4]]);
+                            $originalRows[$key] = $find->fetchAll(PDO::FETCH_ASSOC);
+                        }
+                        $matches = $originalRows[$key];
                         if ($matches) {
-                            foreach ($matches as $id) $update->execute([$row[0], $id]);
-                            $updated++;
-                            continue;
+                            $newTeacherNames = array_map('trim', explode(',', $row[0]));
+                            $candidates = array_values(array_filter($matches, static function($existing) use ($row, $newTeacherNames) {
+                                $oldName = trim($existing['teacher_name']);
+                                return $oldName === $row[0] || in_array($oldName, $newTeacherNames, true);
+                            }));
+                            if (count($candidates) === 1) {
+                                $update->execute([$row[0], $candidates[0]['id']]);
+                                $updated++;
+                                continue;
+                            }
+                            if (count($candidates) === 0 && count($matches) === 1 && $fileKeyCounts[$key] === 1) {
+                                $update->execute([$row[0], $matches[0]['id']]);
+                                $updated++;
+                                continue;
+                            }
+                            if (count($candidates) > 1 || ($fileKeyCounts[$key] === 1 && count($matches) > 1)) {
+                                throw new RuntimeException("วิชา {$row[1]} ชั้น {$row[3]} ห้อง {$row[4]} มีครูหลายรายการ กรุณาระบุชื่อครูเดิมในช่องชื่อครูด้วย");
+                            }
                         }
                     }
                     $insert->execute(array_slice($row, 0, 7));
@@ -852,6 +869,9 @@ switch ($action) {
                 }
                 $pdo->commit();
                 echo json_encode(["success" => true, "message" => "บันทึกภาระงานสอนแล้ว: เพิ่มใหม่ $added รายการ, แก้ชื่อครูวิชาเดิม $updated รายการ"], JSON_UNESCAPED_UNICODE);
+            } catch (RuntimeException $e) {
+                if ($pdo->inTransaction()) $pdo->rollBack();
+                echo json_encode(["success" => false, "message" => $e->getMessage() . " (ยังไม่เปลี่ยนข้อมูลเดิม)"], JSON_UNESCAPED_UNICODE);
             } catch (Throwable $e) {
                 if ($pdo->inTransaction()) $pdo->rollBack();
                 echo json_encode(["success" => false, "message" => "บันทึกภาระงานสอนไม่สำเร็จ ข้อมูลเดิมยังไม่เปลี่ยน"], JSON_UNESCAPED_UNICODE);

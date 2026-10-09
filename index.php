@@ -751,7 +751,7 @@ tr.hover\:bg-green-50\/50:hover td.sticky-col-1, tr.hover\:bg-green-50\/50:hover
                 <div class="text-gray-500">
                     <i class="fa-solid fa-cloud-arrow-up text-4xl mb-2 text-blue-500"></i>
                     <p class="font-bold text-gray-700" id="excelFileNameDisplay">คลิกหรือลากไฟล์ Excel มาวางที่นี่</p>
-                    <p class="text-xs mt-1 text-blue-600 font-medium" id="excelInstructions">คอลัมน์ A-G: ชื่อครู (สอนร่วมคั่นด้วย ,) | รหัสวิชา | ชื่อรายวิชา | ระดับชั้น | ห้อง | ภาคเรียน | ปีการศึกษา · วิชาเดิมจะปรับชื่อครูโดยไม่เพิ่มแถวซ้ำ</p>
+                    <p class="text-xs mt-1 text-blue-600 font-medium" id="excelInstructions">คอลัมน์ A-G: ชื่อครู (สอนร่วมคั่นด้วย ,) | รหัสวิชา | ชื่อรายวิชา | ระดับชั้น | ห้อง | ภาคเรียน | ปีการศึกษา · หากวิชา/ห้องมีหลายครูเดิม ให้ใส่ชื่อครูเดิมที่ต้องการแก้รวมด้วย</p>
                 </div>
             </div>
             <div class="flex flex-col gap-2 w-full md:w-auto">
