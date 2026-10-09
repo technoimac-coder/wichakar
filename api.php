@@ -829,7 +829,9 @@ switch ($action) {
                     $delete = $pdo->prepare("DELETE FROM teaching_load WHERE term = ? AND year = ?");
                     foreach ($termYearPairs as $pair) $delete->execute($pair);
                 }
-                $find = $pdo->prepare("SELECT id, teacher_name FROM teaching_load WHERE term = ? AND year = ? AND REPLACE(subject_code, ' ', '') = ? AND REPLACE(REPLACE(class_level, 'ม.', ''), 'ม', '') = ? AND CAST(room AS UNSIGNED) = ? FOR UPDATE");
+                // Match one exact room. Casting a value such as "1-5" to a number would
+                // incorrectly treat it as room 1 and change another class's teacher.
+                $find = $pdo->prepare("SELECT id, teacher_name FROM teaching_load WHERE term = ? AND year = ? AND REPLACE(subject_code, ' ', '') = ? AND REPLACE(REPLACE(class_level, 'ม.', ''), 'ม', '') = ? AND TRIM(room) = ? FOR UPDATE");
                 $update = $pdo->prepare("UPDATE teaching_load SET teacher_name = ? WHERE id = ?");
                 $insert = $pdo->prepare("INSERT INTO teaching_load (teacher_name, subject_code, subject_name, class_level, room, term, year) VALUES (?, ?, ?, ?, ?, ?, ?)");
                 $updated = 0;
