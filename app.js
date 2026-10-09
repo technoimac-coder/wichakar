@@ -1669,27 +1669,68 @@ function renderGroupedTeachingLoad() {
     tbody.innerHTML = html;
 }
 
+let adminEditSubmitHandler = null;
+
+function openAdminEditModal(title, description, value, onSubmit) {
+    const modal = document.getElementById('adminEditModal');
+    if (!modal) return;
+    document.getElementById('adminEditTitle').textContent = title;
+    document.getElementById('adminEditDescription').textContent = description;
+    document.getElementById('adminEditInput').value = value;
+    document.getElementById('adminEditError').classList.add('hidden');
+    document.getElementById('adminEditSaveBtn').disabled = false;
+    adminEditSubmitHandler = onSubmit;
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    document.getElementById('adminEditInput').focus();
+}
+
+function closeAdminEditModal() {
+    const modal = document.getElementById('adminEditModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+    adminEditSubmitHandler = null;
+}
+
+function setAdminEditError(message) {
+    const error = document.getElementById('adminEditError');
+    error.textContent = message;
+    error.classList.remove('hidden');
+    document.getElementById('adminEditSaveBtn').disabled = false;
+}
+
+function submitAdminEditModal() {
+    if (!adminEditSubmitHandler) return;
+    const saveBtn = document.getElementById('adminEditSaveBtn');
+    if (saveBtn.disabled) return;
+    const value = document.getElementById('adminEditInput').value;
+    document.getElementById('adminEditError').classList.add('hidden');
+    adminEditSubmitHandler(value);
+}
+
 function editTeachingLoadTeachers(groupIndex) {
     const group = displayedTeachingLoadGroups[groupIndex];
     if (!group || !Array.isArray(group.ids) || group.ids.length === 0) return;
-    const entered = prompt(`แก้ชื่อครูผู้สอนของ ${group.name} (${group.code}) ห้อง ${formatRooms(group.rooms)}\nหากสอนร่วม ให้คั่นชื่อครูด้วย ,`, group.teacher);
-    if (entered === null) return;
-    const teacherName = [...new Set(entered.split(',').map(name => name.trim()).filter(Boolean))].join(', ');
-    if (!teacherName || teacherName.length > 100) {
-        alert('กรุณาระบุชื่อครูผู้สอนให้ถูกต้อง ไม่เกิน 100 ตัวอักษร');
-        return;
-    }
-    if (teacherName === group.teacher) return;
-    google.script.run.withSuccessHandler(function(res) {
-        if (res.success) {
-            showToast('แก้ไขสำเร็จ', res.message || 'แก้ชื่อครูผู้สอนแล้ว');
-            loadExistingTeachingLoad();
-        } else {
-            alert(res.message || 'แก้ชื่อครูผู้สอนไม่สำเร็จ');
+    openAdminEditModal('แก้ชื่อครูผู้สอน', `${group.name} (${group.code}) ห้อง ${formatRooms(group.rooms)} · หากสอนร่วม ให้คั่นชื่อครูด้วย ,`, group.teacher, function(entered) {
+        const teacherName = [...new Set(entered.split(',').map(name => name.trim()).filter(Boolean))].join(', ');
+        if (!teacherName || teacherName.length > 100) {
+            setAdminEditError('กรุณาระบุชื่อครูผู้สอนให้ถูกต้อง ไม่เกิน 100 ตัวอักษร');
+            return;
         }
-    }).withFailureHandler(function(err) {
-        alert('เกิดข้อผิดพลาด: ' + err.message);
-    }).updateTeachingLoadTeachers(group.ids, group.teacher, teacherName);
+        if (teacherName === group.teacher) { closeAdminEditModal(); return; }
+        document.getElementById('adminEditSaveBtn').disabled = true;
+        google.script.run.withSuccessHandler(function(res) {
+            if (res.success) {
+                closeAdminEditModal();
+                showToast('แก้ไขสำเร็จ', res.message || 'แก้ชื่อครูผู้สอนแล้ว');
+                loadExistingTeachingLoad();
+            } else {
+                setAdminEditError(res.message || 'แก้ชื่อครูผู้สอนไม่สำเร็จ');
+            }
+        }).withFailureHandler(function(err) {
+            setAdminEditError('เกิดข้อผิดพลาด: ' + err.message);
+        }).updateTeachingLoadTeachers(group.ids, group.teacher, teacherName);
+    });
 }
 
 
@@ -1783,31 +1824,32 @@ function renderTeacherAccountsList() {
 function editTeacherUsername(accountIndex) {
     const account = rawTeacherAccounts[accountIndex];
     if (!account) return;
-    const entered = prompt(`แก้ Username ของ ${account.name}\nรหัสผ่านและสิทธิ์จะยังเหมือนเดิม`, account.username);
-    if (entered === null) return;
-    const newUsername = entered.trim();
-    if (!/^[A-Za-z0-9._@-]{1,50}$/.test(newUsername)) {
-        alert('Username ต้องมี 1-50 ตัวอักษร และใช้เฉพาะตัวอักษรอังกฤษ ตัวเลข . _ @ -');
-        return;
-    }
-    if (newUsername === account.username) return;
-    if (!confirm(`ยืนยันเปลี่ยน Username จาก ${account.username} เป็น ${newUsername}?`)) return;
-    google.script.run.withSuccessHandler(function(res) {
-        if (res.success) {
-            if (currentTeacherId.toLowerCase() === account.username.toLowerCase()) {
-                currentTeacherId = newUsername.toUpperCase();
-                const savedSession = JSON.parse(sessionStorage.getItem('mmv_session') || '{}');
-                savedSession.id = currentTeacherId;
-                sessionStorage.setItem('mmv_session', JSON.stringify(savedSession));
-            }
-            showToast('แก้ไขสำเร็จ', res.message || 'แก้ Username แล้ว');
-            loadTeacherAccountsList();
-        } else {
-            alert(res.message || 'แก้ Username ไม่สำเร็จ');
+    openAdminEditModal('แก้ Username (รหัสประจำตัว)', `บัญชีของ ${account.name} · รหัสผ่านและสิทธิ์จะยังเหมือนเดิม`, account.username, function(entered) {
+        const newUsername = entered.trim();
+        if (!/^[A-Za-z0-9._@-]{1,50}$/.test(newUsername)) {
+            setAdminEditError('Username ต้องมี 1-50 ตัวอักษร และใช้เฉพาะตัวอักษรอังกฤษ ตัวเลข . _ @ -');
+            return;
         }
-    }).withFailureHandler(function(err) {
-        alert('เกิดข้อผิดพลาด: ' + err.message);
-    }).updateTeacherUsername(account.username, newUsername);
+        if (newUsername === account.username) { closeAdminEditModal(); return; }
+        document.getElementById('adminEditSaveBtn').disabled = true;
+        google.script.run.withSuccessHandler(function(res) {
+            if (res.success) {
+                if (currentTeacherId.toLowerCase() === account.username.toLowerCase()) {
+                    currentTeacherId = newUsername.toUpperCase();
+                    const savedSession = JSON.parse(sessionStorage.getItem('mmv_session') || '{}');
+                    savedSession.id = currentTeacherId;
+                    sessionStorage.setItem('mmv_session', JSON.stringify(savedSession));
+                }
+                closeAdminEditModal();
+                showToast('แก้ไขสำเร็จ', res.message || 'แก้ Username แล้ว');
+                loadTeacherAccountsList();
+            } else {
+                setAdminEditError(res.message || 'แก้ Username ไม่สำเร็จ');
+            }
+        }).withFailureHandler(function(err) {
+            setAdminEditError('เกิดข้อผิดพลาด: ' + err.message);
+        }).updateTeacherUsername(account.username, newUsername);
+    });
 }
 
 function confirmResetPasswordByIndex(accountIndex) {

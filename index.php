@@ -933,6 +933,20 @@ tr.hover\:bg-green-50\/50:hover td.sticky-col-1, tr.hover\:bg-green-50\/50:hover
     </div>
 </div>
 
-<script src="app.js?v=20261009-username-edit"></script>
+<div id="adminEditModal" class="fixed inset-0 bg-gray-900 bg-opacity-60 z-[99999] hidden items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="adminEditTitle">
+    <div class="bg-white rounded-2xl p-6 w-full max-w-lg shadow-2xl fade-in">
+        <h3 id="adminEditTitle" class="text-xl font-bold text-gray-800 mb-2"></h3>
+        <p id="adminEditDescription" class="text-sm text-gray-600 mb-4"></p>
+        <label for="adminEditInput" class="block text-sm font-semibold text-gray-700 mb-1">ข้อมูลใหม่</label>
+        <input id="adminEditInput" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" onkeydown="if(event.key === 'Enter') submitAdminEditModal()">
+        <p id="adminEditError" class="hidden text-sm text-red-600 mt-2" role="alert"></p>
+        <div class="flex gap-3 justify-end mt-6">
+            <button type="button" onclick="closeAdminEditModal()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">ยกเลิก</button>
+            <button id="adminEditSaveBtn" type="button" onclick="submitAdminEditModal()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">บันทึก</button>
+        </div>
+    </div>
+</div>
+
+<script src="app.js?v=20261009-username-edit-2"></script>
 </body>
 </html>
