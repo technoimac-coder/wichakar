@@ -862,7 +862,11 @@ function renderMatrixTable(res){
         finalHtml += `   </tr><tr>`;
         
         subjects.forEach(sub => {
-            finalHtml += `<th style="border: 1px solid #000; padding: 1px 0; font-size: 8px; font-weight: normal; width: 30px;">${sub.code}</th>`;
+            finalHtml += `<th style="border: 1px solid #000; height: 42px; padding: 0; font-size: 8px; font-weight: normal; width: 30px; position: relative; overflow: hidden;">
+                                <div style="position: absolute; top: 50%; left: 50%; width: 38px; height: 18px; transform: translate(-50%, -50%) rotate(-90deg); line-height: 18px; text-align: center; box-sizing: border-box;">
+                                    <span style="white-space: nowrap; font-size: 8px; font-weight: normal;">${sub.code}</span>
+                                </div>
+                          </th>`;
         });
 
         const actNames = ['แนะแนว', 'กิจกรรมเพื่อสังคม', 'ชุมนุม', 'รักการอ่าน'];
@@ -876,7 +880,8 @@ function renderMatrixTable(res){
 
         finalHtml += `   </tr></thead><tbody>`;
 
-        let getActColor = (v) => (v==='ซ'||v==='มผ') ? 'red' : 'black';
+        // ในรายงานให้แสดงเฉพาะสถานะ "ซ" ส่วนสถานะปกติและค่าอื่นเว้นว่าง
+        let renderStatus = (v) => v === 'ซ' ? `<span style="color: red; font-family: 'Sarabun'; font-weight: bold;">ซ</span>` : '';
 
         students.forEach((student, index) => {
             let displayNo = student.no !== 999 && student.no !== undefined ? student.no : (index + 1);
@@ -890,15 +895,15 @@ function renderMatrixTable(res){
             
             subjects.forEach(sub => {
                 let status = grades[student.id + "_" + sub.code];
-                let displayStatus = status ? `<span style="color: red; font-family: 'Sarabun'; font-weight: bold;">${status}</span>` : '';
+                let displayStatus = renderStatus(status);
                 finalHtml += `<td style="border: 1px solid #000; padding: 1px 2px;">${displayStatus}</td>`;
             });
 
             let actData = activities ? activities[student.id] : null;
-            let a1 = actData && actData.s1 ? `<span style="color: ${getActColor(actData.s1)}; font-family: 'Sarabun'; font-weight: bold;">${actData.s1}</span>` : '';
-            let a2 = actData && actData.s2 ? `<span style="color: ${getActColor(actData.s2)}; font-family: 'Sarabun'; font-weight: bold;">${actData.s2}</span>` : '';
-            let a3 = actData && actData.s3 ? `<span style="color: ${getActColor(actData.s3)}; font-family: 'Sarabun'; font-weight: bold;">${actData.s3}</span>` : '';
-            let a4 = actData && actData.s4 ? `<span style="color: ${getActColor(actData.s4)}; font-family: 'Sarabun'; font-weight: bold;">${actData.s4}</span>` : '';
+            let a1 = renderStatus(actData && actData.s1);
+            let a2 = renderStatus(actData && actData.s2);
+            let a3 = renderStatus(actData && actData.s3);
+            let a4 = renderStatus(actData && actData.s4);
 
             finalHtml += `<td style="border: 1px solid #000; padding: 1px 2px;">${a1}</td>`;
             finalHtml += `<td style="border: 1px solid #000; padding: 1px 2px;">${a2}</td>`;

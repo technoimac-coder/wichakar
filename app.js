@@ -874,7 +874,11 @@ function renderMatrixTable(res){
         finalHtml += `   </tr><tr>`;
         
         subjects.forEach(sub => {
-            finalHtml += `<th style="border: 1px solid #000; padding: 1px 0; font-size: 8px; font-weight: normal; width: 30px;">${sub.code}</th>`;
+            finalHtml += `<th style="border: 1px solid #000; height: 42px; padding: 0; font-size: 8px; font-weight: normal; width: 30px; position: relative; overflow: hidden;">
+                                <div style="position: absolute; top: 50%; left: 50%; width: 38px; height: 18px; transform: translate(-50%, -50%) rotate(-90deg); line-height: 18px; text-align: center; box-sizing: border-box;">
+                                    <span style="white-space: nowrap; font-size: 8px; font-weight: normal;">${sub.code}</span>
+                                </div>
+                          </th>`;
         });
 
         const actNames = ['แนะแนว', 'กิจกรรมเพื่อสังคม', 'ชุมนุม', 'รักการอ่าน'];
@@ -888,7 +892,8 @@ function renderMatrixTable(res){
 
         finalHtml += `   </tr></thead><tbody>`;
 
-        let getActColor = (v) => (v==='ซ'||v==='มผ') ? 'red' : 'black';
+        // แสดงเฉพาะนักเรียนที่ติด ซ ในรายงาน Matrix
+        let renderStatus = (v) => v === 'ซ' ? `<span style="color: red; font-family: 'Sarabun'; font-weight: bold;">ซ</span>` : '';
 
         students.forEach((student, index) => {
             let displayNo = student.no !== 999 && student.no !== undefined ? student.no : (index + 1);
@@ -902,15 +907,15 @@ function renderMatrixTable(res){
             
             subjects.forEach(sub => {
                 let status = grades[student.id + "_" + sub.code];
-                let displayStatus = status ? `<span style="color: red; font-family: 'Sarabun'; font-weight: bold;">${status}</span>` : '';
+                let displayStatus = renderStatus(status);
                 finalHtml += `<td style="border: 1px solid #000; padding: 1px 2px;">${displayStatus}</td>`;
             });
 
             let actData = activities ? activities[student.id] : null;
-            let a1 = actData && actData.s1 ? `<span style="color: ${getActColor(actData.s1)}; font-family: 'Sarabun'; font-weight: bold;">${actData.s1}</span>` : '';
-            let a2 = actData && actData.s2 ? `<span style="color: ${getActColor(actData.s2)}; font-family: 'Sarabun'; font-weight: bold;">${actData.s2}</span>` : '';
-            let a3 = actData && actData.s3 ? `<span style="color: ${getActColor(actData.s3)}; font-family: 'Sarabun'; font-weight: bold;">${actData.s3}</span>` : '';
-            let a4 = actData && actData.s4 ? `<span style="color: ${getActColor(actData.s4)}; font-family: 'Sarabun'; font-weight: bold;">${actData.s4}</span>` : '';
+            let a1 = renderStatus(actData && actData.s1);
+            let a2 = renderStatus(actData && actData.s2);
+            let a3 = renderStatus(actData && actData.s3);
+            let a4 = renderStatus(actData && actData.s4);
 
             finalHtml += `<td style="border: 1px solid #000; padding: 1px 2px;">${a1}</td>`;
             finalHtml += `<td style="border: 1px solid #000; padding: 1px 2px;">${a2}</td>`;
@@ -929,7 +934,7 @@ function renderMatrixTable(res){
             let failCount = 0;
             students.forEach(st => {
                 let s = grades[st.id + "_" + sub.code];
-                if (s === 'ซ' || s === 'มส' || s === 'มผ') failCount++;
+                if (s === 'ซ') failCount++;
             });
             let displayCount = failCount > 0 ? `<span style="color: red; font-weight: bold; font-size: 9px;">${failCount}</span>` : '<span style="color: #64748b; font-size: 8px;">0</span>';
             finalHtml += `<td style="border: 1px solid #000; padding: 2px; text-align: center;">${displayCount}</td>`;
@@ -939,10 +944,10 @@ function renderMatrixTable(res){
         students.forEach(st => {
             let act = activities ? activities[st.id] : null;
             if (act) {
-                if (act.s1 === 'ซ' || act.s1 === 'มผ') actFailCount[0]++;
-                if (act.s2 === 'ซ' || act.s2 === 'มผ') actFailCount[1]++;
-                if (act.s3 === 'ซ' || act.s3 === 'มผ') actFailCount[2]++;
-                if (act.s4 === 'ซ' || act.s4 === 'มผ') actFailCount[3]++;
+                if (act.s1 === 'ซ') actFailCount[0]++;
+                if (act.s2 === 'ซ') actFailCount[1]++;
+                if (act.s3 === 'ซ') actFailCount[2]++;
+                if (act.s4 === 'ซ') actFailCount[3]++;
             }
         });
         actFailCount.forEach(c => {
