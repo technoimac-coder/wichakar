@@ -526,6 +526,18 @@ switch ($action) {
             $subStmt->execute([$cleanLevel, $curRoom, $term, $year]);
             $subjects = $subStmt->fetchAll();
 
+            // If the teaching-load import is missing for this term, still show
+            // every subject already recorded in grades/submissions for the room.
+            if (empty($subjects)) {
+                $fallbackStmt = $pdo->prepare("SELECT subject_code as code, MAX(subject_name) as name, MAX(teacher_name) as teacher
+                                              FROM grades
+                                              WHERE term = ? AND year = ? AND room = ?
+                                                AND subject_code NOT IN ('ACT99', 'VOLUNTEER', 'จิตอาสา')
+                                              GROUP BY subject_code ORDER BY subject_code ASC");
+                $fallbackStmt->execute([$term, $year, $curRoom]);
+                $subjects = $fallbackStmt->fetchAll();
+            }
+
             // ดึงนักเรียน
             $stStmt = $pdo->prepare("SELECT student_no as no, student_id as id, name 
                                      FROM students 
