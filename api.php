@@ -220,7 +220,11 @@ switch ($action) {
         break;
 
     // 4. เข้าสู่ระบบ (Login)
-        case "getTeacherAccounts":
+    case "getTeacherAccounts":
+        if (($_SESSION["role"] ?? "") !== "Admin") {
+            echo json_encode(["success" => false, "message" => "กรุณาเข้าสู่ระบบด้วยบัญชีผู้ดูแล"], JSON_UNESCAPED_UNICODE);
+            break;
+        }
         $stmt = $pdo->query("SELECT username, name, advisor_room as advisorRoom, role, 
                              (CASE WHEN password IN ('Password@123', '1234') THEN 1 ELSE 0 END) as isDefaultPassword 
                              FROM teachers 
@@ -230,6 +234,10 @@ switch ($action) {
         break;
 
     case "resetTeacherPassword":
+        if (($_SESSION["role"] ?? "") !== "Admin") {
+            echo json_encode(["success" => false, "message" => "เฉพาะผู้ดูแลระบบเท่านั้นที่รีเซ็ตรหัสผ่านได้ กรุณาเข้าสู่ระบบใหม่"], JSON_UNESCAPED_UNICODE);
+            break;
+        }
         $u = trim($input["username"] ?? "");
         if (empty($u)) {
             echo json_encode(["success" => false, "message" => "กรุณาระบุ Username ที่ต้องการรีเซ็ต"], JSON_UNESCAPED_UNICODE);
@@ -319,8 +327,8 @@ switch ($action) {
         $oldP = trim($input["oldPassword"] ?? "");
         $newP = trim($input["newPassword"] ?? "");
         
-        if (empty($u) || empty($newP)) {
-            echo json_encode(["success" => false, "message" => "กรุณากรอกรหัสผ่านใหม่"], JSON_UNESCAPED_UNICODE);
+        if (empty($u) || empty($oldP) || empty($newP)) {
+            echo json_encode(["success" => false, "message" => "กรุณากรอกรหัสผ่านเดิมและรหัสผ่านใหม่"], JSON_UNESCAPED_UNICODE);
             break;
         }
         if (strlen($newP) < 6) {
@@ -333,15 +341,19 @@ switch ($action) {
         }
         
         // ตรวจสอบ user
-        $stmt = $pdo->prepare("SELECT id FROM teachers WHERE UPPER(username) = UPPER(?)");
-        $stmt->execute([$u]);
+        $stmt = $pdo->prepare("SELECT id FROM teachers WHERE UPPER(username) = UPPER(?) AND password = ?");
+        $stmt->execute([$u, $oldP]);
         if (!$stmt->fetch()) {
-            echo json_encode(["success" => false, "message" => "ไม่พบผู้ใช้นี้ในระบบ"], JSON_UNESCAPED_UNICODE);
+            echo json_encode(["success" => false, "message" => "รหัสผ่านเดิมไม่ถูกต้อง"], JSON_UNESCAPED_UNICODE);
             break;
         }
 
-        $upd = $pdo->prepare("UPDATE teachers SET password = ? WHERE UPPER(username) = UPPER(?)");
-        $upd->execute([$newP, $u]);
+        $upd = $pdo->prepare("UPDATE teachers SET password = ? WHERE UPPER(username) = UPPER(?) AND password = ?");
+        $upd->execute([$newP, $u, $oldP]);
+        if ($upd->rowCount() === 0) {
+            echo json_encode(["success" => false, "message" => "รหัสผ่านเดิมเปลี่ยนไปแล้ว กรุณาลองใหม่"], JSON_UNESCAPED_UNICODE);
+            break;
+        }
         echo json_encode(["success" => true, "message" => "เปลี่ยนรหัสผ่านสำเร็จเรียบร้อยแล้ว"], JSON_UNESCAPED_UNICODE);
         break;
 

@@ -947,6 +947,6 @@ tr.hover\:bg-green-50\/50:hover td.sticky-col-1, tr.hover\:bg-green-50\/50:hover
     </div>
 </div>
 
-<script src="app.js?v=20261009-bulk-teachers"></script>
+<script src="app.js?v=20261009-admin-reset"></script>
 </body>
 </html>

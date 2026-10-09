@@ -1753,6 +1753,10 @@ function loadTeacherAccountsList() {
     tbody.innerHTML = '<tr><td colspan="6" class="p-6 text-center text-blue-600 font-bold"><i class="fa-solid fa-spinner fa-spin mr-2"></i> กำลังโหลดข้อมูลบัญชีผู้ใช้...</td></tr>';
     
     google.script.run.withSuccessHandler(function(data) {
+        if (data && data.success === false) {
+            tbody.innerHTML = '<tr><td colspan="6" class="p-6 text-center text-red-600 font-bold">' + (data.message || 'กรุณาเข้าสู่ระบบด้วยบัญชีผู้ดูแล') + '</td></tr>';
+            return;
+        }
         rawTeacherAccounts = Array.isArray(data) ? data : [];
         renderTeacherAccountsList();
     }).withFailureHandler(function(err) {
